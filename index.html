@@ -554,16 +554,20 @@
       </div>
       <div class="panel-body">
         <div class="keyrow" style="margin-top:0;">
-          <label for="engineMode">Extraction engine</label>
+          <label for="engineMode">Active engine</label>
           <select id="engineMode">
             <option value="home">Home server (local model)</option>
             <option value="gemini">Gemini (cloud fallback)</option>
           </select>
+          <small>Whichever is selected here is used for extraction and for the Email Writer's "Generate findings with AI". Both credentials below are always editable — fill in whichever engine(s) you use.</small>
         </div>
 
         <div class="keyrow" id="homeServerRow">
-          <label for="homeUrl">Home server URL</label>
-          <input type="text" id="homeUrl" placeholder="https://case-tool.yourdomain.com">
+          <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0;">
+            <span>Home server URL</span>
+            <span class="tag ok" id="homeActiveTag">Active</span>
+          </label>
+          <input type="text" id="homeUrl" placeholder="https://case-tool.yourdomain.com" style="margin-top:5px;">
           <label for="homeToken" style="margin-top:8px;">Home server token</label>
           <input type="password" id="homeToken" placeholder="paste the API_TOKEN from your .env">
           <small>
@@ -571,9 +575,12 @@
           </small>
         </div>
 
-        <div class="keyrow" id="geminiRow" style="display:none;">
-          <label for="apiKey">Gemini API key</label>
-          <input type="password" id="apiKey" placeholder="AIza...">
+        <div class="keyrow" id="geminiRow">
+          <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0;">
+            <span>Gemini API key</span>
+            <span class="tag ok" id="geminiActiveTag">Active</span>
+          </label>
+          <input type="password" id="apiKey" placeholder="AIza..." style="margin-top:5px;">
           <small>
             Stored only in this browser (localStorage), never committed to the repo or sent anywhere but generativelanguage.googleapis.com.
             Because this page runs entirely client-side, anyone who can view this browser's storage can see the key — don't use this on a shared machine, and rotate the key if that's a concern.

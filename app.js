@@ -84,19 +84,22 @@ apiKeyInput.addEventListener("input", () => {
 const engineModeEl = el("engineMode");
 const homeUrlInput = el("homeUrl");
 const homeTokenInput = el("homeToken");
-const homeServerRow = el("homeServerRow");
-const geminiRow = el("geminiRow");
 const engineTagEl = el("engineTag");
+const homeActiveTag = el("homeActiveTag");
+const geminiActiveTag = el("geminiActiveTag");
 
 engineModeEl.value = localStorage.getItem("case_register_engine") || "home";
 homeUrlInput.value = localStorage.getItem("case_register_home_url") || "";
 homeTokenInput.value = localStorage.getItem("case_register_home_token") || "";
 
+// Both credential rows stay visible in Options at all times (so there's
+// always somewhere to enter either one) — only the "Active" tag and the
+// compact intake-panel tag reflect which engine is actually in use.
 function syncEngineRows() {
   const isHome = engineModeEl.value === "home";
-  homeServerRow.style.display = isHome ? "" : "none";
-  geminiRow.style.display = isHome ? "none" : "";
   engineTagEl.textContent = isHome ? "Home server" : "Gemini";
+  homeActiveTag.hidden = !isHome;
+  geminiActiveTag.hidden = isHome;
 }
 syncEngineRows();
 
