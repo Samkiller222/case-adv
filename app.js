@@ -27,9 +27,34 @@ const FIELDS = [
   { key: "uncertain", label: "Uncertain about", type: "textarea", full: true },
 ];
 
+// Malta Central Visa Unit — "Documentation Required for Employment Visa" checklist
+// (visas of more than 90 days), version 3 dated 18.03.2025.
+const CHECKLIST_ITEMS = [
+  { id: "visa_form", label: "Visa Application Form",
+    criteria: "Fully filled and signed by the applicant." },
+  { id: "passport", label: "Passport",
+    criteria: "Minimum validity of 8 months from the date of the visa application." },
+  { id: "passport_photo", label: "Passport photo",
+    criteria: "Meets ICAO standards (recent, plain light background, neutral expression, correct size/head proportions)." },
+  { id: "aip_letter", label: "Approval in Principle (AIP) letter",
+    criteria: "Present, and the visa is being applied for within 60 days of the AIP letter's issuance date." },
+  { id: "vfs_appointment", label: "VFS Appointment Letter",
+    criteria: "Present." },
+  { id: "flight_tickets", label: "Prospective flight tickets",
+    criteria: "Full itinerary provided, clearly showing the applicant's name, flight date, and all stops — preferably transiting outside the Schengen area." },
+  { id: "insurance", label: "Medical & travel insurance",
+    criteria: "Valid for the Schengen area; minimum €30,000 medical coverage; minimum 180 consecutive days, valid at least from the point of submission of the visa application; shows name, surname, and passport number; coverage is not restricted or linked to the applicant's place of residence and does not restrict the applicant to departing only from the country where the policy was issued. If the certificate doesn't show all of this, a table of benefits is required to confirm it." },
+  { id: "accommodation", label: "Proof of prospective accommodation",
+    criteria: "Matches the applicable accommodation type: (a) employer-provided free accommodation — notarised/lawyer-signed declaration by the host, a copy of the host's ID card, and (if a secondary address) proof of the host's link to that residence; OR (b) rented accommodation — a registered lease agreement signed by both parties stating duration, home address, applicant's name, and rent; OR (c) hotel/short-term/vacation rental — a booking for a minimum of 14 consecutive nights from the date of prospective arrival in Malta." },
+  { id: "skills_pass", label: "Skills Pass (if applicable)",
+    criteria: "Required only for applicants working directly or indirectly in the tourism and hospitality sector — Skills Pass Part 1 and Part 2 completion certificates issued by the Institute of Tourism Studies. Not applicable outside that sector." },
+  { id: "fees", label: "Visa application fee",
+    criteria: "€150 standard / €250 extended. This is a payment made by credit/visa card, not a document — always mark this item \"Not applicable\" since it cannot be verified from uploaded documents." },
+];
+
 const state = {
   files: [],       // {id, file}
-  record: null,    // last extracted record (object keyed by FIELDS[].key)
+  record: null,    // last extracted record (object keyed by FIELDS[].key), plus .checklist
   log: JSON.parse(localStorage.getItem("case_log") || "[]"),
 };
 
@@ -139,7 +164,17 @@ name, surname, gender, passport_number, date_appointment, aip_date, flight_date,
 - Dates: use whatever format appears in the source document; do not invent a date that isn't present.
 - If a field is not present in any document, return an empty string for it — never guess or fabricate.
 - comments: a short note on anything relevant you noticed (e.g. discrepancies, missing documents) — not a restatement of the other fields.
-- uncertain: separate from comments. List each field you were NOT confident about and why — e.g. handwriting was hard to read, two documents gave conflicting dates, a value was inferred rather than directly stated. Leave this empty ("") only if you're confident in every field you filled in.`;
+- uncertain: separate from comments. List each field you were NOT confident about and why — e.g. handwriting was hard to read, two documents gave conflicting dates, a value was inferred rather than directly stated. Leave this empty ("") only if you're confident in every field you filled in.
+
+Additionally, check the uploaded documents against Malta's Central Visa Unit "Documentation Required for Employment Visa" checklist below. Return a "checklist" array in the JSON with exactly one entry per item, in this order, each an object with keys "id", "status", "note":
+${CHECKLIST_ITEMS.map((c, i) => `${i + 1}. id="${c.id}" — ${c.label}: ${c.criteria}`).join("\n")}
+
+For each item, set "status" to exactly one of:
+- "Compliant": a document satisfying this item is present and meets the stated criteria.
+- "Non-compliant": a relevant document is present but fails to meet the stated criteria — say specifically why in "note" (e.g. which figure, date, or detail falls short).
+- "Missing": no document addressing this item was provided at all.
+- "Not applicable": the item doesn't apply to this case (e.g. skills_pass when the applicant isn't in tourism/hospitality; the fees item, which is always "Not applicable" since it's a payment, not a document).
+"note" should be one short sentence citing the specific shortfall for "Non-compliant", or a brief reason for "Missing"/"Not applicable". Leave it empty ("") for "Compliant" unless there's a minor caveat worth flagging. Base every verdict only on what the documents actually show — never assume compliance for a document that wasn't provided.`;
 
     const body = {
       contents: [{ role: "user", parts: [{ text: instruction }, ...parts] }],
@@ -167,6 +202,7 @@ name, surname, gender, passport_number, date_appointment, aip_date, flight_date,
 
     const cleaned = rawText.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(cleaned);
+    parsed.checklist = normalizeChecklist(parsed.checklist);
 
     state.record = parsed;
     renderRecord(true);
@@ -208,8 +244,60 @@ function fileToBase64(file) {
   });
 }
 
+const CHECKLIST_STATUSES = ["Compliant", "Non-compliant", "Missing", "Not applicable"];
+
+function normalizeChecklist(raw) {
+  const byId = new Map((Array.isArray(raw) ? raw : []).map(c => [c && c.id, c]));
+  return CHECKLIST_ITEMS.map(item => {
+    const found = byId.get(item.id) || {};
+    const status = CHECKLIST_STATUSES.includes(found.status) ? found.status : "Missing";
+    return { id: item.id, status, note: (found.note || "").toString() };
+  });
+}
+
+function checklistBadgeClass(status) {
+  return { Compliant: "ok", "Non-compliant": "err", Missing: "warn", "Not applicable": "muted" }[status] || "muted";
+}
+
+// ---------- Checklist compliance ----------
+const checklistBody = el("checklistBody");
+const checklistTag = el("checklistTag");
+
+function renderChecklist(checklist) {
+  if (!checklist || !checklist.length) {
+    checklistTag.textContent = "Not checked";
+    checklistTag.className = "tag";
+    checklistBody.innerHTML = `<div class="empty-state"><span class="mark">✓</span>Compliance against the Employment Visa document checklist will appear here after extraction.</div>`;
+    return;
+  }
+
+  const flagged = checklist.filter(c => c.status === "Non-compliant" || c.status === "Missing").length;
+  checklistTag.textContent = flagged === 0 ? "All clear" : `${flagged} issue${flagged === 1 ? "" : "s"}`;
+  checklistTag.className = "tag " + (flagged === 0 ? "ok" : "err");
+
+  const list = document.createElement("div");
+  list.className = "checklist-list";
+  checklist.forEach(c => {
+    const item = CHECKLIST_ITEMS.find(i => i.id === c.id);
+    const row = document.createElement("div");
+    row.className = "checklist-item";
+    row.innerHTML = `
+      <div class="checklist-item-head">
+        <span class="checklist-label">${escapeHtml(item ? item.label : c.id)}</span>
+        <span class="badge ${checklistBadgeClass(c.status)}">${escapeHtml(c.status)}</span>
+      </div>
+      ${c.note ? `<div class="checklist-note">${escapeHtml(c.note)}</div>` : ""}
+    `;
+    list.appendChild(row);
+  });
+  checklistBody.innerHTML = "";
+  checklistBody.appendChild(list);
+}
+
 // ---------- Draft record UI ----------
 function renderRecord(justExtracted) {
+  renderChecklist(state.record ? state.record.checklist : null);
+
   if (state.record) {
     recordTag.textContent = (state.record.uncertain || "").trim() ? "Draft — check uncertainty notes" : "Draft — review";
   } else {
@@ -290,12 +378,18 @@ function saveToLog() {
 function renderLog() {
   logCount.textContent = `${state.log.length} case${state.log.length === 1 ? "" : "s"}`;
   if (state.log.length === 0) {
-    logBody.innerHTML = `<tr><td colspan="11" style="color:var(--muted); text-align:center;">No cases logged yet.</td></tr>`;
+    logBody.innerHTML = `<tr><td colspan="12" style="color:var(--muted); text-align:center;">No cases logged yet.</td></tr>`;
     return;
   }
   logBody.innerHTML = "";
   state.log.forEach((rec, idx) => {
     const tr = document.createElement("tr");
+    const flagged = (rec.checklist || []).filter(c => c.status === "Non-compliant" || c.status === "Missing").length;
+    const checklistCell = !rec.checklist || !rec.checklist.length
+      ? `<span class="badge muted">n/a</span>`
+      : flagged === 0
+        ? `<span class="badge ok">clear</span>`
+        : `<span class="badge err">${flagged} issue${flagged === 1 ? "" : "s"}</span>`;
     tr.innerHTML = `
       <td>${escapeHtml(rec.name || "")}</td>
       <td>${escapeHtml(rec.surname || "")}</td>
@@ -307,6 +401,7 @@ function renderLog() {
       <td>${escapeHtml(rec.employer || "")}</td>
       <td>${escapeHtml(rec.job_title || "")}</td>
       <td>${escapeHtml(rec.result || "")}</td>
+      <td>${checklistCell}</td>
       <td><button class="row-del" data-idx="${idx}">remove</button></td>
     `;
     logBody.appendChild(tr);
@@ -323,10 +418,19 @@ function renderLog() {
 el("exportBtn").addEventListener("click", () => {
   if (state.log.length === 0) { setStatus("No cases to export yet.", true); return; }
   const keys = FIELDS.map(f => f.key);
-  const header = keys.join(",");
-  const rows = state.log.map(rec =>
-    keys.map(k => csvCell(rec[k] || "")).join(",")
-  );
+  const header = [...keys, "checklist_issues"].join(",");
+  const rows = state.log.map(rec => {
+    const base = keys.map(k => csvCell(rec[k] || "")).join(",");
+    const issues = (rec.checklist || [])
+      .filter(c => c.status === "Non-compliant" || c.status === "Missing")
+      .map(c => {
+        const item = CHECKLIST_ITEMS.find(i => i.id === c.id);
+        const label = item ? item.label : c.id;
+        return c.note ? `${label}: ${c.note}` : `${label} (${c.status})`;
+      })
+      .join("; ");
+    return `${base},${csvCell(issues)}`;
+  });
   const csv = [header, ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);

@@ -60,6 +60,24 @@
     letter-spacing:.08em; color:var(--muted); border:1px solid var(--line);
     padding:2px 7px; border-radius:2px;
   }
+  .tag.ok{ color:var(--ok); border-color:var(--ok); }
+  .tag.err{ color:var(--stamp); border-color:var(--stamp); }
+
+  .badge{
+    font-family:var(--font-data); font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.06em; padding:2px 7px; border-radius:2px; border:1px solid;
+    white-space:nowrap;
+  }
+  .badge.ok{ color:var(--ok); border-color:var(--ok); background:#EAF3EE; }
+  .badge.err{ color:var(--stamp); border-color:var(--stamp); background:#FBF1EF; }
+  .badge.warn{ color:var(--brass); border-color:var(--brass); background:#FBF6EA; }
+  .badge.muted{ color:var(--muted); border-color:var(--line); background:var(--paper); }
+
+  .checklist-list{ display:flex; flex-direction:column; gap:10px; }
+  .checklist-item{ border:1px solid var(--line); border-radius:2px; padding:10px 12px; }
+  .checklist-item-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .checklist-label{ font-size:13px; font-weight:600; }
+  .checklist-note{ margin-top:5px; font-size:12px; color:var(--muted); }
   .panel-body{ padding:18px; }
 
   .drop{
@@ -206,6 +224,20 @@
 
   </div>
 
+  <!-- CHECKLIST COMPLIANCE -->
+  <section class="panel" style="margin-top:24px;">
+    <div class="panel-head">
+      <h2>Checklist compliance</h2>
+      <span class="tag" id="checklistTag">Not checked</span>
+    </div>
+    <div class="panel-body" id="checklistBody">
+      <div class="empty-state">
+        <span class="mark">✓</span>
+        Compliance against the Employment Visa document checklist will appear here after extraction.
+      </div>
+    </div>
+  </section>
+
   <!-- CASE LOG -->
   <section class="panel" style="margin-top:24px;">
     <div class="panel-head">
@@ -221,11 +253,11 @@
           <tr>
             <th>Name</th><th>Surname</th><th>Gender</th><th>Passport #</th>
             <th>Appt.</th><th>AIP</th><th>Flight</th><th>Employer</th>
-            <th>Job title</th><th>Result</th><th></th>
+            <th>Job title</th><th>Result</th><th>Checklist</th><th></th>
           </tr>
         </thead>
         <tbody id="logBody">
-          <tr><td colspan="11" style="color:var(--muted); text-align:center;">No cases logged yet.</td></tr>
+          <tr><td colspan="12" style="color:var(--muted); text-align:center;">No cases logged yet.</td></tr>
         </tbody>
       </table>
     </div>

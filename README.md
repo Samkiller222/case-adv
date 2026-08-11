@@ -12,8 +12,15 @@ No backend. It's a static page (`index.html` + `app.js`) that:
 - reads text directly out of text-based PDFs (`pdf.js`, loaded from a CDN),
 - sends images, and scanned PDFs with no text layer, straight to the
   **Gemini API** for extraction (Gemini reads PDFs and images natively),
+- checks the uploaded documents against Malta's Central Visa Unit
+  "Documentation Required for Employment Visa" checklist (10 items: visa
+  form, passport validity, photo, AIP timing, VFS appointment, flight
+  itinerary, insurance thresholds, accommodation proof, Skills Pass,
+  fees) and shows each item as Compliant / Non-compliant / Missing / Not
+  applicable, with a one-line reason,
 - shows you the draft so you can correct anything before it's saved,
-- keeps a running case log in the browser (`localStorage`) with CSV export.
+- keeps a running case log in the browser (`localStorage`) with CSV export
+  (including a `checklist_issues` column summarizing any flagged items).
 
 ## Before you use it
 
