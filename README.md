@@ -8,10 +8,12 @@ Fields extracted: Name, Surname, Gender, Passport number, Date appointment, AIP 
 Flight Date, Accommodation, Insurance, Insurance Expiry, Skills pass, Job title,
 Employer, result, Comments.
 
-No backend. It's a static page (`index.html` + `app.js`) that:
+No backend required. It's a static page (`index.html` + `app.js`) that:
 - reads text directly out of text-based PDFs (`pdf.js`, loaded from a CDN),
-- sends images, and scanned PDFs with no text layer, straight to the
-  **Gemini API** for extraction (Gemini reads PDFs and images natively),
+- sends images, and scanned PDFs with no text layer, to whichever
+  **extraction engine** you pick — your own **home server**, or the
+  **Gemini API** as a cloud fallback (Gemini reads PDFs and images
+  natively),
 - checks the uploaded documents against Malta's Central Visa Unit
   "Documentation Required for Employment Visa" checklist (10 items: visa
   form, passport validity, photo, AIP timing, VFS appointment, flight
@@ -20,30 +22,43 @@ No backend. It's a static page (`index.html` + `app.js`) that:
   applicable, with a one-line reason,
 - shows you the draft so you can correct anything before it's saved,
 - keeps a running case log in the browser (`localStorage`) with CSV export
-  (including a `checklist_issues` column summarizing any flagged items).
+  (including a `checklist_issues` column summarizing any flagged items),
+- supports a **dark mode** toggle (top-right of the header) that remembers
+  your choice.
 
-## Before you use it
+## Extraction engine: home server vs. Gemini
 
-You need a Gemini API key — free, no credit card required:
+The "Extraction engine" dropdown on the page switches between two ways of
+processing documents — nothing else about the page changes:
 
-1. Go to **aistudio.google.com** and sign in.
-2. Click **Get API key → Create API key**.
-3. Copy the key (starts with `AIza...`) and paste it into the page.
+- **Home server (local model)** — your own server, reachable at a URL you
+  provide. The page `POST`s the files as `multipart/form-data` to
+  `<your-url>/extract` with `Authorization: Bearer <your-token>`, and
+  expects back a JSON body shaped like the extracted record (the same keys
+  as the Gemini path, plus an optional `checklist` array — see
+  `app.js`/`normalizeChecklist` for the exact shape). Nothing reaches a
+  third-party AI provider; documents go straight from your browser to your
+  server over HTTPS. This mode is selected by default.
+- **Gemini (cloud fallback)** — sends documents directly to Google's
+  `generativelanguage.googleapis.com` using a Gemini API key you supply
+  (free, no credit card — go to **aistudio.google.com**, **Get API key →
+  Create API key**, and paste the key, which starts with `AIza...`, into
+  the page).
 
-The page keeps it in your browser's `localStorage` — it is **never** written
-to this repo or sent anywhere except `generativelanguage.googleapis.com`.
+Both the URL/token and the API key are kept only in your browser's
+`localStorage` — **never** written to this repo or sent anywhere except
+the destination you chose.
 
-**Two caveats to know about the free tier:**
+**Two caveats to know about the Gemini fallback's free tier:**
 - Google's free tier terms allow prompts/documents sent through it to be used
   to improve their products. That's a real consideration here since you're
   sending passport numbers and personal case data — if that's a concern,
-  switch to a paid Gemini key (same account, just enable billing) or a
-  different provider; the extraction logic is isolated in `runExtraction()`
-  in `app.js` so swapping providers later is a contained change.
-- Because this is a static page with no server, the key lives in your browser
-  and every request is made directly from it — fine for personal/local use,
-  but don't host this on a shared machine without clearing the key, and never
-  commit a key into the repo.
+  switch to a paid Gemini key (same account, just enable billing), or use
+  the home server engine instead.
+- Because this is a static page with no server of its own, the Gemini key
+  lives in your browser and every request is made directly from it — fine
+  for personal/local use, but don't host this on a shared machine without
+  clearing the key, and never commit a key into the repo.
 
 Passport numbers and personal case data are sensitive — treat the case log
 (and any exported CSV) the same way you'd treat a paper case file.

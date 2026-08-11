@@ -68,11 +68,47 @@ const recordTag = el("recordTag");
 const logBody = el("logBody");
 const logCount = el("logCount");
 
-// ---------- API key persistence ----------
+// ---------- API key / engine persistence ----------
 const apiKeyInput = el("apiKey");
 apiKeyInput.value = localStorage.getItem("case_register_gemini_key") || "";
 apiKeyInput.addEventListener("input", () => {
   localStorage.setItem("case_register_gemini_key", apiKeyInput.value.trim());
+});
+
+const engineModeEl = el("engineMode");
+const homeUrlInput = el("homeUrl");
+const homeTokenInput = el("homeToken");
+const homeServerRow = el("homeServerRow");
+const geminiRow = el("geminiRow");
+
+engineModeEl.value = localStorage.getItem("case_register_engine") || "home";
+homeUrlInput.value = localStorage.getItem("case_register_home_url") || "";
+homeTokenInput.value = localStorage.getItem("case_register_home_token") || "";
+
+function syncEngineRows() {
+  const isHome = engineModeEl.value === "home";
+  homeServerRow.style.display = isHome ? "" : "none";
+  geminiRow.style.display = isHome ? "none" : "";
+}
+syncEngineRows();
+
+engineModeEl.addEventListener("change", () => {
+  localStorage.setItem("case_register_engine", engineModeEl.value);
+  syncEngineRows();
+});
+homeUrlInput.addEventListener("input", () => {
+  localStorage.setItem("case_register_home_url", homeUrlInput.value.trim());
+});
+homeTokenInput.addEventListener("input", () => {
+  localStorage.setItem("case_register_home_token", homeTokenInput.value.trim());
+});
+
+// ---------- Theme ----------
+el("themeToggle").addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("case_register_theme", next);
 });
 
 // ---------- File intake ----------
@@ -118,6 +154,58 @@ el("clearBtn").addEventListener("click", () => { state.files = []; renderFileLis
 extractBtn.addEventListener("click", runExtraction);
 
 async function runExtraction() {
+  if (engineModeEl.value === "home") {
+    return runExtractionViaHomeServer();
+  }
+  return runExtractionViaGemini();
+}
+
+async function runExtractionViaHomeServer() {
+  const url = homeUrlInput.value.trim();
+  const token = homeTokenInput.value.trim();
+  if (!url) {
+    setStatus("Enter your home server URL first.", true);
+    return;
+  }
+  if (!token) {
+    setStatus("Enter your home server token first.", true);
+    return;
+  }
+  extractBtn.disabled = true;
+  setStatus("Sending documents to home server…");
+
+  try {
+    const formData = new FormData();
+    state.files.forEach(({ file }) => formData.append("files", file, file.name));
+
+    const resp = await fetch(`${url.replace(/\/$/, "")}/extract`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      const errBody = await resp.json().catch(() => ({}));
+      throw new Error(errBody.error || `Home server error ${resp.status}`);
+    }
+
+    const parsed = await resp.json();
+    parsed.checklist = normalizeChecklist(parsed.checklist);
+    state.record = parsed;
+    renderRecord(true);
+    setStatus(`Extracted from ${state.files.length} document${state.files.length === 1 ? "" : "s"} (home server). Review before saving.`);
+  } catch (err) {
+    console.error(err);
+    const msg = /Failed to fetch|NetworkError/i.test(err.message || "")
+      ? "Can't reach the home server — check it's on and connected, or switch to Gemini fallback above."
+      : (err.message || "Extraction failed.");
+    setStatus(msg, true);
+  } finally {
+    extractBtn.disabled = state.files.length === 0;
+  }
+}
+
+async function runExtractionViaGemini() {
   const key = apiKeyInput.value.trim();
   if (!key) {
     setStatus("Enter your Gemini API key first.", true);
