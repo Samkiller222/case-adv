@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Register — Document Extractor</title>
+<style>
+  :root{
+    --ink:#1B2733;
+    --paper:#EDF0F2;
+    --paper-raised:#FFFFFF;
+    --line:#C7D0D8;
+    --stamp:#B23A2F;
+    --stamp-dark:#8C2C22;
+    --brass:#A98A4B;
+    --muted:#5C6B78;
+    --ok:#3A6B52;
+    --font-display: 'Source Serif Pro', 'Iowan Old Style', Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-data: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  header{
+    background:var(--ink); color:var(--paper);
+    padding:28px 32px 22px;
+    border-bottom:4px solid var(--brass);
+  }
+  header .eyebrow{
+    font-family:var(--font-data); font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--brass); margin-bottom:6px;
+  }
+  header h1{
+    font-family:var(--font-display); font-weight:600; font-size:28px; margin:0;
+  }
+  header p{ margin:6px 0 0; color:#AEB9C4; font-size:13.5px; max-width:640px; }
+
+  main{ max-width:1180px; margin:0 auto; padding:28px 32px 80px; }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+  @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+  .panel{
+    background:var(--paper-raised); border:1px solid var(--line);
+    border-radius:2px;
+  }
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid var(--line);
+  }
+  .panel-head h2{
+    font-family:var(--font-display); font-size:16px; margin:0; font-weight:600;
+  }
+  .tag{
+    font-family:var(--font-data); font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--muted); border:1px solid var(--line);
+    padding:2px 7px; border-radius:2px;
+  }
+  .panel-body{ padding:18px; }
+
+  .drop{
+    border:2px dashed var(--line); border-radius:2px; padding:34px 18px;
+    text-align:center; color:var(--muted); cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .drop.drag{ border-color:var(--stamp); background:#FBF1EF; }
+  .drop strong{ color:var(--ink); }
+  .drop input{ display:none; }
+
+  #fileList{ list-style:none; margin:14px 0 0; padding:0; font-family:var(--font-data); font-size:12.5px; }
+  #fileList li{
+    display:flex; justify-content:space-between; padding:6px 0;
+    border-bottom:1px solid var(--line); color:var(--muted);
+  }
+  #fileList li span.name{ color:var(--ink); }
+  #fileList li button{
+    background:none; border:none; color:var(--stamp); cursor:pointer; font-family:var(--font-data); font-size:12px;
+  }
+
+  .keyrow{ margin-top:16px; }
+  .keyrow label{ font-size:12px; color:var(--muted); display:block; margin-bottom:5px; }
+  .keyrow input[type=password], .keyrow input[type=text]{
+    width:100%; font-family:var(--font-data); font-size:12.5px;
+    padding:8px 10px; border:1px solid var(--line); border-radius:2px; background:var(--paper);
+  }
+  .keyrow small{ display:block; margin-top:5px; color:var(--muted); font-size:11px; line-height:1.5; }
+
+  .btn{
+    font-family:var(--font-body); font-weight:600; font-size:13.5px;
+    padding:11px 20px; border-radius:2px; border:1px solid var(--ink);
+    background:var(--ink); color:var(--paper); cursor:pointer; letter-spacing:.01em;
+  }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn.secondary{ background:transparent; color:var(--ink); }
+  .btn.stamp{ background:var(--stamp); border-color:var(--stamp-dark); }
+
+  .actions{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+
+  .status{ font-family:var(--font-data); font-size:12px; color:var(--muted); margin-top:12px; min-height:16px; }
+  .status.busy::before{ content:"◌ "; }
+  .status.err{ color:var(--stamp); }
+
+  /* extracted form */
+  .field{ margin-bottom:12px; }
+  .field label{
+    display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--muted); margin-bottom:4px; font-family:var(--font-data);
+  }
+  .field input, .field select, .field textarea{
+    width:100%; padding:8px 9px; border:1px solid var(--line); border-radius:2px;
+    font-family:var(--font-data); font-size:13px; background:var(--paper); color:var(--ink);
+  }
+  .field textarea{ min-height:56px; resize:vertical; }
+  .fields-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+  .fields-grid .full{ grid-column:1 / -1; }
+
+  .empty-state{ color:var(--muted); font-size:13px; padding:30px 6px; text-align:center; }
+  .empty-state .mark{ font-family:var(--font-display); font-size:34px; color:var(--line); display:block; margin-bottom:8px; }
+
+  /* case log table */
+  .log-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-family:var(--font-data); font-size:12px; }
+  th, td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th{ color:var(--muted); text-transform:uppercase; font-size:10.5px; letter-spacing:.06em; }
+  tr:hover td{ background:#F6F8F9; }
+  .row-del{ color:var(--stamp); background:none; border:none; cursor:pointer; font-family:var(--font-data); }
+
+  .stamped{ position:relative; }
+  .stamped::after{
+    content:"EXTRACTED"; position:absolute; top:10px; right:14px;
+    font-family:var(--font-data); font-size:11px; letter-spacing:.12em;
+    color:var(--ok); border:2px solid var(--ok); padding:2px 8px; border-radius:2px;
+    transform:rotate(-6deg); opacity:0; animation:stamp .35s ease-out forwards;
+  }
+  @keyframes stamp{
+    0%{ opacity:0; transform:rotate(-6deg) scale(1.7); }
+    60%{ opacity:1; }
+    100%{ opacity:1; transform:rotate(-6deg) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .stamped::after{ animation:none; opacity:1; }
+  }
+
+  footer{ text-align:center; color:var(--muted); font-size:11.5px; padding:20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Case Register · Document Extraction</div>
+  <h1>Employment case intake</h1>
+  <p>Upload supporting documents for a case (passport, employer letter, appointment or flight confirmation). The register reads them and drafts the case record below for you to check before export.</p>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- LEFT: intake -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Documents in</h2>
+        <span class="tag" id="fileCount">0 files</span>
+      </div>
+      <div class="panel-body">
+        <div class="drop" id="drop">
+          <strong>Drop files here</strong> or click to browse<br>
+          <span style="font-size:11.5px;">PDF, JPG, PNG — passport pages, letters, confirmations</span>
+          <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <ul id="fileList"></ul>
+
+        <div class="keyrow">
+          <label for="apiKey">Gemini API key</label>
+          <input type="password" id="apiKey" placeholder="AIza...">
+          <small>
+            Stored only in this browser (localStorage), never committed to the repo or sent anywhere but generativelanguage.googleapis.com.
+            Because this page runs entirely client-side, anyone who can view this browser's storage can see the key — don't use this on a shared machine, and rotate the key if that's a concern.
+            Note: on Google's free tier, document content sent for extraction may be used to improve Google's products — worth knowing given these are case documents.
+          </small>
+        </div>
+
+        <div class="actions">
+          <button class="btn stamp" id="extractBtn" disabled>Extract case data</button>
+          <button class="btn secondary" id="clearBtn">Clear files</button>
+        </div>
+        <div class="status" id="status"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: extracted record -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Draft case record</h2>
+        <span class="tag" id="recordTag">Unverified</span>
+      </div>
+      <div class="panel-body" id="recordBody">
+        <div class="empty-state">
+          <span class="mark">§</span>
+          Extracted fields will appear here for review once documents are processed.
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- CASE LOG -->
+  <section class="panel" style="margin-top:24px;">
+    <div class="panel-head">
+      <h2>Case log</h2>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span class="tag" id="logCount">0 cases</span>
+        <button class="btn secondary" id="exportBtn" style="padding:7px 14px; font-size:12.5px;">Export CSV</button>
+      </div>
+    </div>
+    <div class="panel-body log-wrap">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>Name</th><th>Surname</th><th>Gender</th><th>Passport #</th>
+            <th>Appt.</th><th>AIP</th><th>Flight</th><th>Employer</th>
+            <th>Job title</th><th>Result</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+          <tr><td colspan="11" style="color:var(--muted); text-align:center;">No cases logged yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>Local, single-user tool. No data leaves the browser except direct calls to the Anthropic API for extraction.</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
