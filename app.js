@@ -95,7 +95,7 @@ extractBtn.addEventListener("click", runExtraction);
 async function runExtraction() {
   const key = apiKeyInput.value.trim();
   if (!key) {
-    setStatus("Enter your Anthropic API key first.", true);
+    setStatus("Enter your Gemini API key first.", true);
     return;
   }
   extractBtn.disabled = true;
