@@ -117,6 +117,11 @@
 
   .header-left{ display:flex; align-items:flex-start; gap:14px; }
   .menu-wrap{ position:relative; flex:none; }
+  .brand-logo{
+    width:40px; height:40px; flex:none; margin-top:2px;
+    border-radius:var(--radius-sm); object-fit:cover;
+    box-shadow:0 0 0 1px rgba(237,240,242,.18);
+  }
   .app-menu{
     position:absolute; top:calc(100% + 8px); left:0; z-index:20;
     min-width:220px; background:var(--surface); border:1px solid var(--border);
@@ -385,6 +390,7 @@
           </button>
         </div>
       </div>
+      <img src="icons/logo.png" alt="Case Register logo" class="brand-logo">
       <div>
         <div class="eyebrow" id="viewEyebrow">Case Register · Document Extraction</div>
         <h1 id="viewTitle">Employment case intake</h1>
