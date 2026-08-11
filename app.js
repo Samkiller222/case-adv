@@ -11,6 +11,15 @@
 // and halt this entire script, taking the menu/theme toggle/everything
 // else down with it.
 
+// Makes the page installable and caches pdf.js for offline use. Registration
+// silently fails on http/file:// or unsupported browsers — extraction still
+// works normally either way, this is a pure enhancement.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
 const FIELDS = [
   { key: "name", label: "Name", type: "text" },
   { key: "surname", label: "Surname", type: "text" },
@@ -757,6 +766,72 @@ el("exportBtn").addEventListener("click", () => {
   a.href = url; a.download = `case-log-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+});
+
+const logStatusEl = el("logStatus");
+function setLogStatus(msg, isErr) {
+  logStatusEl.textContent = msg;
+  logStatusEl.className = "status" + (isErr ? " err" : "");
+}
+
+// ---------- Full JSON backup/restore ----------
+// CSV export drops the checklist verdicts and can't be re-imported; this
+// keeps a full-fidelity copy of the case log (including ids, so re-importing
+// the same backup twice doesn't create duplicates).
+el("exportJsonBtn").addEventListener("click", () => {
+  if (state.log.length === 0) { setLogStatus("No cases to export yet.", true); return; }
+  const payload = {
+    format: "case-register-backup",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    log: state.log,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `case-log-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  setLogStatus(`Exported ${state.log.length} case${state.log.length === 1 ? "" : "s"} as a JSON backup.`);
+});
+
+const importJsonInput = el("importJsonInput");
+el("importJsonBtn").addEventListener("click", () => importJsonInput.click());
+
+importJsonInput.addEventListener("change", () => {
+  const file = importJsonInput.files[0];
+  importJsonInput.value = ""; // allow re-selecting the same file later
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : Array.isArray(parsed.log) ? parsed.log : null;
+      if (!incoming) throw new Error("This file doesn't look like a case log backup — expected a JSON array or an object with a \"log\" array.");
+
+      const existingIds = new Set(state.log.map(c => c.id));
+      let added = 0, skipped = 0;
+      incoming.forEach(entry => {
+        if (!entry || typeof entry !== "object") { skipped++; return; }
+        const withId = entry.id ? entry : { ...entry, id: crypto.randomUUID() };
+        if (existingIds.has(withId.id)) { skipped++; return; }
+        withId.checklist = normalizeChecklist(withId.checklist);
+        state.log.push(withId);
+        existingIds.add(withId.id);
+        added++;
+      });
+
+      localStorage.setItem("case_log", JSON.stringify(state.log));
+      renderLog();
+      setLogStatus(`Imported ${added} case${added === 1 ? "" : "s"}${skipped ? ` (${skipped} already present, skipped)` : ""}.`);
+    } catch (err) {
+      console.error(err);
+      setLogStatus(err.message || "Couldn't read that file as a case log backup.", true);
+    }
+  };
+  reader.onerror = () => setLogStatus("Couldn't read that file.", true);
+  reader.readAsText(file);
 });
 
 function csvCell(v) {

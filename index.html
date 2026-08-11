@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Case Register — Document Extractor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#1B2733">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Case Register">
 <script>
   // Set the theme before first paint to avoid a light/dark flash.
   (function () {
@@ -467,11 +474,15 @@
   <section class="panel" style="margin-top:24px;">
     <div class="panel-head">
       <h2>Case log</h2>
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <span class="tag" id="logCount">0 cases</span>
         <button class="btn secondary" id="exportBtn" style="padding:7px 14px; font-size:12.5px;">Export CSV</button>
+        <button class="btn secondary" id="exportJsonBtn" style="padding:7px 14px; font-size:12.5px;">Export JSON backup</button>
+        <button class="btn secondary" id="importJsonBtn" style="padding:7px 14px; font-size:12.5px;">Import JSON backup</button>
+        <input type="file" id="importJsonInput" accept="application/json,.json" style="display:none;">
       </div>
     </div>
+    <div class="status" id="logStatus" style="padding:0 18px; margin-top:-4px;"></div>
     <div class="panel-body log-wrap">
       <table id="logTable">
         <thead>

@@ -22,14 +22,48 @@ No backend required. It's a static page (`index.html` + `app.js`) that:
   applicable, with a one-line reason,
 - shows you the draft so you can correct anything before it's saved,
 - keeps a running case log in the browser (`localStorage`) with CSV export
-  (including a `checklist_issues` column summarizing any flagged items),
+  (including a `checklist_issues` column summarizing any flagged items) and
+  a full-fidelity **JSON backup/restore** (see below),
 - lets you **reopen and edit** any saved case — click "edit" on its case
   log row to load it back into the draft panel, change anything (e.g.
   update `result` as a case progresses from "email sent" to "passed"), and
   either "Update case" (saves in place, no duplicate row) or "Cancel edit"
   to leave the saved entry untouched,
 - supports a **dark mode** toggle (top-right of the header) that remembers
-  your choice.
+  your choice,
+- is **installable** (Add to Home Screen / desktop install) and keeps
+  working offline once it's been opened online at least once (see below).
+
+## Case log backup & restore
+
+CSV export (in the Case log panel) is for spreadsheets, but it drops the
+checklist verdicts and can't be re-imported. Next to it, **"Export JSON
+backup"** downloads the full case log — every field plus each case's
+checklist array — and **"Import JSON backup"** reads one back in. Import
+merges by the case's internal id: re-importing the same backup, or one that
+overlaps with your current log, adds only the cases you don't already have
+and reports how many were skipped as duplicates, so it's safe to import
+repeatedly without creating duplicate rows. Since the case log otherwise
+lives only in this browser's `localStorage`, exporting a backup periodically
+(and after any big batch of cases) is the way to protect against a cleared
+cache or a browser switch.
+
+## Installable / offline
+
+A service worker (`sw.js`) makes the page installable — desktop Chrome/Edge
+show an install icon in the address bar, mobile shows "Add to Home Screen".
+Installed or not, it also caches pdf.js (the CDN library used for PDF text
+extraction) the first time you load the page online, so a flaky or blocked
+CDN — the failure mode that used to be able to take down the whole page,
+see `extractPdfText()` in `app.js` — stops mattering after that first
+visit. The app shell (`index.html`, `app.js`) is cached network-first, so
+you always get the latest version when online and only fall back to the
+cached copy when offline; extraction calls themselves (POST requests to
+Gemini or your home server) are never intercepted or cached, only actual
+GET requests for the app's own files and the pinned pdf.js CDN URLs.
+Bumping `CACHE_VERSION` at the top of `sw.js` forces already-installed
+users to drop old cached files on their next online visit — do that when
+you ship a change that needs to reach them promptly.
 
 ## Apps menu
 
