@@ -111,6 +111,75 @@ el("themeToggle").addEventListener("click", () => {
   localStorage.setItem("case_register_theme", next);
 });
 
+// ---------- Apps menu / view switching ----------
+const VIEW_META = {
+  intake: {
+    eyebrow: "Case Register · Document Extraction",
+    title: "Employment case intake",
+    subtitle: "Upload supporting documents for a case (passport, employer letter, appointment or flight confirmation). The register reads them and drafts the case record below for you to check before export.",
+  },
+  email: {
+    eyebrow: "Case Register · Correspondence",
+    title: "Email writer",
+    subtitle: "Draft a document-revision request from the current case's findings, or write one from scratch.",
+  },
+};
+
+const viewIntakeEl = el("view-intake");
+const viewEmailEl = el("view-email");
+const menuToggle = el("menuToggle");
+const appMenu = el("appMenu");
+let currentView = "intake";
+let emailAutoLoaded = false;
+
+function switchView(name) {
+  currentView = name;
+  viewIntakeEl.hidden = name !== "intake";
+  viewEmailEl.hidden = name !== "email";
+
+  const meta = VIEW_META[name];
+  el("viewEyebrow").textContent = meta.eyebrow;
+  el("viewTitle").textContent = meta.title;
+  el("viewSubtitle").textContent = meta.subtitle;
+
+  appMenu.querySelectorAll("button[data-view]").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.view === name);
+  });
+
+  if (name === "email" && !emailAutoLoaded) {
+    emailAutoLoaded = true;
+    loadCaseIntoEmail();
+  }
+}
+
+menuToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const willOpen = appMenu.hasAttribute("hidden");
+  if (willOpen) appMenu.removeAttribute("hidden"); else appMenu.setAttribute("hidden", "");
+  menuToggle.setAttribute("aria-expanded", String(willOpen));
+});
+
+appMenu.querySelectorAll("button[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    switchView(btn.dataset.view);
+    appMenu.setAttribute("hidden", "");
+    menuToggle.setAttribute("aria-expanded", "false");
+  });
+});
+
+document.addEventListener("click", (e) => {
+  if (!appMenu.hasAttribute("hidden") && !appMenu.contains(e.target) && e.target !== menuToggle) {
+    appMenu.setAttribute("hidden", "");
+    menuToggle.setAttribute("aria-expanded", "false");
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !appMenu.hasAttribute("hidden")) {
+    appMenu.setAttribute("hidden", "");
+    menuToggle.setAttribute("aria-expanded", "false");
+  }
+});
+
 // ---------- File intake ----------
 const drop = el("drop");
 const fileInput = el("fileInput");
@@ -542,7 +611,183 @@ function setStatus(msg, isErr) {
   statusEl.className = "status" + (isErr ? " err" : "");
 }
 
+// ---------- Email writer ----------
+// Ported from the standalone CVU Revision Email Writer, wired to read the
+// current case's extracted fields and checklist verdicts.
+const CHECKLIST_LINKS = {
+  sport: "https://identita.gov.mt/wp-content/uploads/2025/07/12.-Sports-Trials-Checklist.pdf",
+  student: "https://identita.gov.mt/wp-content/uploads/2025/08/03a.-List-of-Required-Documents-Student_National_Visa.pdf",
+  employment: "https://identita.gov.mt/wp-content/uploads/2025/06/01.-List-of-Required-Documents-EMPLOYMENT-VISA.pdf",
+};
+
+const emailApplicantName = el("emailApplicantName");
+const emailPassportNumber = el("emailPassportNumber");
+const emailSalutation = el("emailSalutation");
+const emailAppTypeRadios = document.querySelectorAll('input[name="emailAppType"]');
+const emailBulletsContainer = el("emailBulletsContainer");
+const emailAddBulletBtn = el("emailAddBulletBtn");
+const emailSubjectReadout = el("emailSubjectReadout");
+const emailOutput = el("emailOutput");
+const emailCopySubjectBtn = el("emailCopySubjectBtn");
+const emailCopyBodyBtn = el("emailCopyBodyBtn");
+const emailCaseTag = el("emailCaseTag");
+const emailLoadCaseBtn = el("emailLoadCaseBtn");
+
+function getEmailAppType() {
+  return document.querySelector('input[name="emailAppType"]:checked').value;
+}
+
+function autoResizeTextarea(node) {
+  node.style.height = "auto";
+  node.style.height = node.scrollHeight + "px";
+}
+
+function createEmailBulletRow(value) {
+  const row = document.createElement("div");
+  row.className = "bullet-row";
+
+  const input = document.createElement("textarea");
+  input.rows = 1;
+  input.placeholder = "Describe the issue found...";
+  input.value = value || "";
+  input.addEventListener("input", () => { autoResizeTextarea(input); renderEmail(); });
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "icon-btn";
+  removeBtn.type = "button";
+  removeBtn.innerHTML = "&times;";
+  removeBtn.title = "Remove";
+  removeBtn.addEventListener("click", () => { row.remove(); renderEmail(); });
+
+  row.appendChild(input);
+  row.appendChild(removeBtn);
+  requestAnimationFrame(() => autoResizeTextarea(input));
+  return row;
+}
+
+function addEmailBullet(value) {
+  emailBulletsContainer.appendChild(createEmailBulletRow(value));
+}
+
+emailAddBulletBtn.addEventListener("click", () => { addEmailBullet(); renderEmail(); });
+emailAppTypeRadios.forEach(r => r.addEventListener("change", renderEmail));
+[emailApplicantName, emailPassportNumber, emailSalutation].forEach(input =>
+  input.addEventListener("input", renderEmail)
+);
+
+function getEmailBulletValues() {
+  return Array.from(emailBulletsContainer.querySelectorAll("textarea"))
+    .map(i => i.value.trim())
+    .filter(v => v.length > 0);
+}
+
+function buildEmailSubject() {
+  const name = emailApplicantName.value.trim();
+  const passport = emailPassportNumber.value.trim();
+  if (!name && !passport) return "";
+  let subj = "Visa Application Revision Required";
+  if (name) subj += ` – ${name}`;
+  if (passport) subj += ` (Passport No. ${passport})`;
+  return subj;
+}
+
+function buildEmailBody() {
+  const name = emailApplicantName.value.trim();
+  const title = emailSalutation.value.trim();
+  let greeting;
+  if (title && name) greeting = `${title} ${name}`;
+  else if (name) greeting = name;
+  else if (title) greeting = title;
+  else greeting = "XXXXXXXX";
+
+  const bullets = getEmailBulletValues();
+  const bulletText = bullets.length
+    ? bullets.map(b => `* ${b}`).join("\n\n \n\n")
+    : "* XXXXXXXX \n\n \n\n* XXXXXXXX \n\n \n\n* XXXXXXXX \n\n \n\n* XXXXXXXX";
+
+  const appType = getEmailAppType();
+  const link = CHECKLIST_LINKS[appType];
+  const subjectReminder = appType === "employment"
+    ? "\n\nAny correspondence should include name and passport number of applicant in the subject."
+    : "";
+
+  return `Dear ${greeting},
+
+Whilst reviewing your application it was noted that:
+
+${bulletText}
+
+Kindly provide us with a revised document that meets CVU's checklist requirements as found on the following link ${link}
+
+Your feedback is required within five working days from the date of this email. Kindly note that no reminders will be sent and that no further revisions will be allowed.
+
+If you fail to provide the necessary requested information within this timeframe, your visa application outcome will be negatively impacted.${subjectReminder}
+
+Kind Regards,`;
+}
+
+function renderEmail() {
+  const subject = buildEmailSubject();
+  emailSubjectReadout.textContent = subject || "Subject will appear here";
+  emailOutput.value = buildEmailBody();
+}
+
+function flashCopied(btn) {
+  const original = btn.textContent;
+  btn.textContent = "Copied!";
+  btn.classList.add("ok-flash");
+  setTimeout(() => { btn.textContent = original; btn.classList.remove("ok-flash"); }, 1200);
+}
+
+emailCopyBodyBtn.addEventListener("click", () => {
+  navigator.clipboard.writeText(emailOutput.value).then(() => flashCopied(emailCopyBodyBtn));
+});
+emailCopySubjectBtn.addEventListener("click", () => {
+  const subj = buildEmailSubject();
+  if (!subj) return;
+  navigator.clipboard.writeText(subj).then(() => flashCopied(emailCopySubjectBtn));
+});
+
+function describeChecklistFinding(entry) {
+  const item = CHECKLIST_ITEMS.find(i => i.id === entry.id);
+  const label = item ? item.label : entry.id;
+  if (entry.status === "Missing") {
+    return `${label} was not included in the documents submitted.`;
+  }
+  return `${label}: ${entry.note || "does not meet the checklist requirements."}`;
+}
+
+function loadCaseIntoEmail() {
+  const rec = state.record;
+  const fullName = rec ? [rec.name, rec.surname].filter(Boolean).join(" ") : "";
+  emailApplicantName.value = fullName;
+  emailPassportNumber.value = rec ? (rec.passport_number || "") : "";
+  emailSalutation.value = rec && rec.gender === "Male" ? "Mr." : rec && rec.gender === "Female" ? "Ms." : "";
+
+  emailBulletsContainer.innerHTML = "";
+  const issues = rec ? (rec.checklist || []).filter(c => c.status === "Non-compliant" || c.status === "Missing") : [];
+  if (issues.length) {
+    issues.forEach(entry => addEmailBullet(describeChecklistFinding(entry)));
+  } else {
+    for (let i = 0; i < 4; i++) addEmailBullet();
+  }
+
+  if (rec) {
+    const fileNote = state.files.length ? `, ${state.files.length} document${state.files.length === 1 ? "" : "s"} attached` : "";
+    emailCaseTag.textContent = `${fullName || "Case"} loaded${fileNote}`;
+    emailCaseTag.className = "tag ok";
+  } else {
+    emailCaseTag.textContent = "No case loaded";
+    emailCaseTag.className = "tag";
+  }
+
+  renderEmail();
+}
+
+emailLoadCaseBtn.addEventListener("click", loadCaseIntoEmail);
+
 // initial render
 renderFileList();
 renderRecord(false);
 renderLog();
+switchView("intake");

@@ -88,19 +88,40 @@
   }
   header p{ margin:6px 0 0; color:var(--header-muted); font-size:13.5px; max-width:640px; }
 
-  .theme-toggle{
+  .theme-toggle, .menu-toggle{
     flex:none; display:inline-flex; align-items:center; justify-content:center;
     width:38px; height:38px; border-radius:999px; margin-top:2px;
     border:1px solid rgba(237,240,242,.25); background:rgba(237,240,242,.06);
     color:var(--header-text); cursor:pointer;
     transition:background-color .15s ease, transform .1s ease;
   }
-  .theme-toggle:hover{ background:rgba(237,240,242,.16); }
-  .theme-toggle:active{ transform:scale(.92); }
-  .theme-toggle svg{ width:18px; height:18px; }
+  .theme-toggle:hover, .menu-toggle:hover{ background:rgba(237,240,242,.16); }
+  .theme-toggle:active, .menu-toggle:active{ transform:scale(.92); }
+  .theme-toggle svg, .menu-toggle svg{ width:18px; height:18px; }
   .theme-toggle .icon-moon{ display:none; }
   :root[data-theme="dark"] .theme-toggle .icon-sun{ display:none; }
   :root[data-theme="dark"] .theme-toggle .icon-moon{ display:block; }
+
+  .header-left{ display:flex; align-items:flex-start; gap:14px; }
+  .menu-wrap{ position:relative; flex:none; }
+  .app-menu{
+    position:absolute; top:calc(100% + 8px); left:0; z-index:20;
+    min-width:220px; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-md); box-shadow:var(--shadow); padding:6px;
+  }
+  .app-menu[hidden]{ display:none; }
+  .app-menu button{
+    display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+    width:100%; text-align:left; padding:9px 10px; border-radius:var(--radius-sm);
+    border:none; background:none; color:var(--text); cursor:pointer;
+    font-family:var(--font-body); font-size:13.5px; font-weight:600;
+  }
+  .app-menu button:hover{ background:var(--surface-alt); }
+  .app-menu button.active{ background:var(--stamp-bg); color:var(--stamp); }
+  .app-menu button span{
+    font-weight:400; font-size:11.5px; color:var(--muted); font-family:var(--font-body);
+  }
+  .app-menu button.active span{ color:inherit; opacity:.8; }
 
   main{ max-width:1180px; margin:0 auto; padding:28px 32px 80px; }
 
@@ -191,6 +212,7 @@
   .btn:disabled{ opacity:.4; cursor:not-allowed; }
   .btn.secondary{ background:transparent; color:var(--text); border-color:var(--border); }
   .btn.stamp{ background:var(--stamp); border-color:var(--stamp-dark); color:#fff; }
+  .btn.ok-flash{ background:var(--ok); border-color:var(--ok); color:#fff; }
 
   .actions{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
 
@@ -215,6 +237,46 @@
   .field textarea{ min-height:56px; resize:vertical; }
   .fields-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
   .fields-grid .full{ grid-column:1 / -1; }
+
+  /* email writer */
+  .field-label{
+    display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--muted); margin-bottom:8px; font-family:var(--font-data);
+  }
+  .radio-group{ display:flex; gap:16px; margin-bottom:16px; }
+  .radio-option{ display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:500; color:var(--text); cursor:pointer; }
+  .radio-option input{ accent-color:var(--stamp); width:15px; height:15px; cursor:pointer; }
+  .bullets-title{ margin-bottom:8px; }
+  .bullet-row{ display:flex; gap:6px; margin-bottom:8px; align-items:flex-start; }
+  .bullet-row textarea{
+    width:100%; padding:8px 9px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font-family:var(--font-body); font-size:13px; background:var(--surface-alt); color:var(--text);
+    resize:none; overflow:hidden; min-height:38px; line-height:1.4;
+  }
+  .bullet-row textarea:focus{ outline:none; border-color:var(--stamp); box-shadow:0 0 0 3px var(--stamp-bg); }
+  .icon-btn{
+    flex:none; width:34px; height:38px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:none; color:var(--muted); cursor:pointer; font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+    transition:background-color .15s ease, color .15s ease;
+  }
+  .icon-btn:hover{ background:var(--stamp-bg); color:var(--stamp); }
+  .add-finding-btn{
+    width:100%; padding:9px; border:1px dashed var(--border); border-radius:var(--radius-sm);
+    background:none; color:var(--stamp); cursor:pointer; font-family:var(--font-body);
+    font-size:13px; font-weight:600;
+  }
+  .add-finding-btn:hover{ background:var(--surface-alt); }
+  .subject-readout{
+    background:var(--surface-alt); border:1px solid var(--border); padding:9px 10px;
+    border-radius:var(--radius-sm); font-size:13px; font-family:var(--font-data); color:var(--text);
+  }
+  #emailOutput{
+    width:100%; min-height:320px; padding:14px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font-size:13.5px; line-height:1.6; font-family:var(--font-body); resize:vertical;
+    color:var(--text); background:var(--surface-alt);
+  }
+  #emailOutput:focus{ outline:none; border-color:var(--stamp); box-shadow:0 0 0 3px var(--stamp-bg); }
 
   .empty-state{ color:var(--muted); font-size:13px; padding:30px 6px; text-align:center; }
   .empty-state .mark{ font-family:var(--font-display); font-size:34px; color:var(--border); display:block; margin-bottom:8px; }
@@ -251,10 +313,31 @@
 
 <header>
   <div class="header-inner">
-    <div>
-      <div class="eyebrow">Case Register · Document Extraction</div>
-      <h1>Employment case intake</h1>
-      <p>Upload supporting documents for a case (passport, employer letter, appointment or flight confirmation). The register reads them and drafts the case record below for you to check before export.</p>
+    <div class="header-left">
+      <div class="menu-wrap">
+        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Open apps menu" aria-haspopup="true" aria-expanded="false" title="Apps">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="app-menu" id="appMenu" hidden role="menu">
+          <button type="button" data-view="intake" role="menuitem">
+            Case intake
+            <span>Upload documents, extract, checklist</span>
+          </button>
+          <button type="button" data-view="email" role="menuitem">
+            Email writer
+            <span>Draft a revision request from the case</span>
+          </button>
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" id="viewEyebrow">Case Register · Document Extraction</div>
+        <h1 id="viewTitle">Employment case intake</h1>
+        <p id="viewSubtitle">Upload supporting documents for a case (passport, employer letter, appointment or flight confirmation). The register reads them and drafts the case record below for you to check before export.</p>
+      </div>
     </div>
     <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -276,6 +359,7 @@
 </header>
 
 <main>
+<div id="view-intake" class="view">
   <div class="grid">
 
     <!-- LEFT: intake -->
@@ -382,6 +466,78 @@
       </table>
     </div>
   </section>
+</div>
+
+<div id="view-email" class="view" hidden>
+  <div class="grid">
+
+    <!-- LEFT: applicant + findings -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Applicant &amp; findings</h2>
+        <span class="tag" id="emailCaseTag">No case loaded</span>
+      </div>
+      <div class="panel-body">
+        <div class="actions" style="margin-top:0;">
+          <button class="btn secondary" id="emailLoadCaseBtn" type="button">Load from current case</button>
+        </div>
+
+        <div class="field" style="margin-top:16px;">
+          <label for="emailApplicantName">Applicant name</label>
+          <input type="text" id="emailApplicantName" placeholder="e.g. John Michael Doe">
+        </div>
+        <div class="field">
+          <label for="emailPassportNumber">Passport number</label>
+          <input type="text" id="emailPassportNumber" placeholder="e.g. P1234567">
+        </div>
+        <div class="field">
+          <label for="emailSalutation">Salutation / title</label>
+          <input type="text" id="emailSalutation" placeholder="e.g. Mr.">
+        </div>
+
+        <div class="field">
+          <span class="field-label">Application type</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="emailAppType" value="sport"> Sport</label>
+            <label class="radio-option"><input type="radio" name="emailAppType" value="student"> Student</label>
+            <label class="radio-option"><input type="radio" name="emailAppType" value="employment" checked> Employment</label>
+          </div>
+        </div>
+
+        <div class="bullets-title">
+          <span class="field-label" style="margin-bottom:0;">Findings</span>
+        </div>
+        <div id="emailBulletsContainer"></div>
+        <button class="add-finding-btn" id="emailAddBulletBtn" type="button">+ Add finding</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: output -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Email draft</h2>
+      </div>
+      <div class="panel-body">
+        <div class="field">
+          <label>Subject line</label>
+          <div class="subject-readout" id="emailSubjectReadout">Subject will appear here</div>
+        </div>
+        <div class="actions" style="margin-top:8px;">
+          <button class="btn secondary" id="emailCopySubjectBtn" type="button">Copy subject</button>
+        </div>
+
+        <div class="field" style="margin-top:18px;">
+          <label for="emailOutput">Email body</label>
+          <textarea id="emailOutput" class="email-output" readonly></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn stamp" id="emailCopyBodyBtn" type="button">Copy body</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
 </main>
 
 <footer>Local, single-user tool. Documents go either to your own home server or directly to the Gemini API, depending on the extraction engine selected above — nothing else ever sees them.</footer>

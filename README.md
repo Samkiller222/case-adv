@@ -26,6 +26,23 @@ No backend required. It's a static page (`index.html` + `app.js`) that:
 - supports a **dark mode** toggle (top-right of the header) that remembers
   your choice.
 
+## Apps menu
+
+The hamburger icon (top-left) switches between the tools this page holds —
+right now:
+
+- **Case intake** — the document upload / extraction / checklist / case log
+  flow described above.
+- **Email writer** — drafts a document-revision request email. Hitting
+  "Load from current case" (or opening the tab for the first time after an
+  extraction) pulls the applicant's name, passport number, and a salutation
+  guessed from gender straight from the current draft, and turns every
+  Non-compliant/Missing checklist item into a findings bullet automatically.
+  Findings are editable free text either way, and the tool works standalone
+  (no case loaded, no AI call) if you just want to type an email from
+  scratch. Application type (Sport / Student / Employment) picks which
+  Central Visa Unit checklist link goes in the email body.
+
 ## Extraction engine: home server vs. Gemini
 
 The "Extraction engine" dropdown on the page switches between two ways of
