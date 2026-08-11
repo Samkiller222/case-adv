@@ -23,6 +23,11 @@ No backend required. It's a static page (`index.html` + `app.js`) that:
 - shows you the draft so you can correct anything before it's saved,
 - keeps a running case log in the browser (`localStorage`) with CSV export
   (including a `checklist_issues` column summarizing any flagged items),
+- lets you **reopen and edit** any saved case — click "edit" on its case
+  log row to load it back into the draft panel, change anything (e.g.
+  update `result` as a case progresses from "email sent" to "passed"), and
+  either "Update case" (saves in place, no duplicate row) or "Cancel edit"
+  to leave the saved entry untouched,
 - supports a **dark mode** toggle (top-right of the header) that remembers
   your choice.
 

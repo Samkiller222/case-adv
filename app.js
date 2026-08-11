@@ -61,8 +61,11 @@ const GEMINI_MODEL = "gemini-3.6-flash";
 const state = {
   files: [],       // {id, file}
   record: null,    // last extracted record (object keyed by FIELDS[].key), plus .checklist
-  log: JSON.parse(localStorage.getItem("case_log") || "[]"),
+  editingCaseId: null, // set while editing a saved case log entry, so Save updates it instead of adding a new one
+  log: JSON.parse(localStorage.getItem("case_log") || "[]")
+    .map(c => c.id ? c : { ...c, id: crypto.randomUUID() }), // backfill ids for entries saved before edit support existed
 };
+localStorage.setItem("case_log", JSON.stringify(state.log));
 
 const el = (id) => document.getElementById(id);
 const fileListEl = el("fileList");
@@ -576,7 +579,9 @@ function renderRecord(justExtracted) {
   renderChecklist(state.record ? state.record.checklist : null);
 
   if (state.record) {
-    recordTag.textContent = (state.record.uncertain || "").trim() ? "Draft — check uncertainty notes" : "Draft — review";
+    recordTag.textContent = state.editingCaseId
+      ? "Editing saved case"
+      : (state.record.uncertain || "").trim() ? "Draft — check uncertainty notes" : "Draft — review";
   } else {
     recordTag.textContent = "Unverified";
   }
@@ -626,12 +631,12 @@ function renderRecord(justExtracted) {
   actions.className = "actions";
   const saveBtn = document.createElement("button");
   saveBtn.className = "btn";
-  saveBtn.textContent = "Save to case log";
+  saveBtn.textContent = state.editingCaseId ? "Update case" : "Save to case log";
   saveBtn.onclick = saveToLog;
   const discardBtn = document.createElement("button");
   discardBtn.className = "btn secondary";
-  discardBtn.textContent = "Discard draft";
-  discardBtn.onclick = () => { state.record = null; renderRecord(false); };
+  discardBtn.textContent = state.editingCaseId ? "Cancel edit" : "Discard draft";
+  discardBtn.onclick = () => { state.record = null; state.editingCaseId = null; renderRecord(false); };
   actions.appendChild(saveBtn);
   actions.appendChild(discardBtn);
   wrap.appendChild(actions);
@@ -641,14 +646,39 @@ function renderRecord(justExtracted) {
 }
 
 function saveToLog() {
-  state.log.push({ ...state.record, savedAt: new Date().toISOString() });
+  const wasEditing = !!state.editingCaseId;
+  if (wasEditing) {
+    const idx = state.log.findIndex(c => c.id === state.editingCaseId);
+    if (idx !== -1) {
+      state.log[idx] = { ...state.record, id: state.editingCaseId, savedAt: state.log[idx].savedAt, updatedAt: new Date().toISOString() };
+    } else {
+      // the entry was removed from the log while it was being edited — save it as a new one instead of losing the edits
+      state.log.push({ ...state.record, id: crypto.randomUUID(), savedAt: new Date().toISOString() });
+    }
+  } else {
+    state.log.push({ ...state.record, id: crypto.randomUUID(), savedAt: new Date().toISOString() });
+  }
   localStorage.setItem("case_log", JSON.stringify(state.log));
   state.record = null;
+  state.editingCaseId = null;
   state.files = [];
   renderFileList();
   renderRecord(false);
   renderLog();
-  setStatus("Saved to case log.");
+  setStatus(wasEditing ? "Case updated." : "Saved to case log.");
+}
+
+function editCaseFromLog(idx) {
+  const entry = state.log[idx];
+  if (!entry) return;
+  const { id, savedAt, updatedAt, ...recordFields } = entry;
+  state.record = recordFields;
+  state.editingCaseId = id;
+  state.files = [];
+  renderFileList();
+  renderRecord(false);
+  switchView("intake");
+  setStatus(`Editing ${(entry.name || entry.surname) ? `${entry.name || ""} ${entry.surname || ""}`.trim() : "case"} — make your changes, then "Update case" (or "Cancel edit" to leave it as-is).`);
 }
 
 // ---------- Case log ----------
@@ -679,13 +709,25 @@ function renderLog() {
       <td>${escapeHtml(rec.job_title || "")}</td>
       <td>${escapeHtml(rec.result || "")}</td>
       <td>${checklistCell}</td>
-      <td><button class="row-del" data-idx="${idx}">remove</button></td>
+      <td>
+        <button class="row-edit" data-idx="${idx}">edit</button>
+        <button class="row-del" data-idx="${idx}">remove</button>
+      </td>
     `;
     logBody.appendChild(tr);
   });
+  logBody.querySelectorAll(".row-edit").forEach(btn => {
+    btn.addEventListener("click", () => editCaseFromLog(Number(btn.dataset.idx)));
+  });
   logBody.querySelectorAll(".row-del").forEach(btn => {
     btn.addEventListener("click", () => {
-      state.log.splice(Number(btn.dataset.idx), 1);
+      const idx = Number(btn.dataset.idx);
+      if (state.log[idx] && state.log[idx].id === state.editingCaseId) {
+        state.record = null;
+        state.editingCaseId = null;
+        renderRecord(false);
+      }
+      state.log.splice(idx, 1);
       localStorage.setItem("case_log", JSON.stringify(state.log));
       renderLog();
     });
