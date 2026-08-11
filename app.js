@@ -547,7 +547,7 @@ function renderChecklist(checklist) {
   if (!checklist || !checklist.length) {
     checklistTag.textContent = "Not checked";
     checklistTag.className = "tag";
-    checklistBody.innerHTML = `<div class="empty-state"><span class="mark">✓</span>Compliance against the Employment Visa document checklist will appear here after extraction.</div>`;
+    checklistBody.innerHTML = `<div class="empty-state"><img class="mark" src="icons/logo.png" alt="">Compliance against the Employment Visa document checklist will appear here after extraction.</div>`;
     return;
   }
 
@@ -586,7 +586,7 @@ function renderRecord(justExtracted) {
     recordTag.textContent = "Unverified";
   }
   if (!state.record) {
-    recordBody.innerHTML = `<div class="empty-state"><span class="mark">§</span>Extracted fields will appear here for review once documents are processed.</div>`;
+    recordBody.innerHTML = `<div class="empty-state"><img class="mark" src="icons/logo.png" alt="">Extracted fields will appear here for review once documents are processed.</div>`;
     return;
   }
 
