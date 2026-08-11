@@ -331,7 +331,10 @@
   #emailOutput:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
 
   .empty-state{ color:var(--muted); font-size:13px; padding:30px 6px; text-align:center; }
-  .empty-state .mark{ font-family:var(--font-display); font-size:34px; color:var(--border); display:block; margin-bottom:8px; }
+  .empty-state .mark{
+    display:block; width:44px; height:44px; margin:0 auto 10px;
+    border-radius:var(--radius-sm); object-fit:cover; opacity:.32;
+  }
 
   /* case log table */
   .log-wrap{ overflow-x:auto; }
@@ -454,7 +457,7 @@
       </div>
       <div class="panel-body" id="recordBody">
         <div class="empty-state">
-          <span class="mark">§</span>
+          <img class="mark" src="icons/logo.png" alt="">
           Extracted fields will appear here for review once documents are processed.
         </div>
       </div>
@@ -470,7 +473,7 @@
     </div>
     <div class="panel-body" id="checklistBody">
       <div class="empty-state">
-        <span class="mark">✓</span>
+        <img class="mark" src="icons/logo.png" alt="">
         Compliance against the Employment Visa document checklist will appear here after extraction.
       </div>
     </div>
