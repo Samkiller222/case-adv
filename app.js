@@ -4,8 +4,12 @@
  * in this repo).
  */
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+// pdf.js is loaded from a CDN and configured lazily (see extractPdfText) so
+// that a blocked/failed CDN load (ad-blockers, corporate proxies, a
+// throttled background tab) only breaks PDF text extraction — not the
+// whole page. Referencing the global directly at parse time would throw
+// and halt this entire script, taking the menu/theme toggle/everything
+// else down with it.
 
 const FIELDS = [
   { key: "name", label: "Name", type: "text" },
@@ -373,6 +377,13 @@ For each item, set "status" to exactly one of:
 }
 
 function extractPdfText(file) {
+  if (typeof pdfjsLib === "undefined") {
+    return Promise.reject(new Error("PDF reader (pdf.js) failed to load from its CDN — check your network/ad-blocker and reload the page. Image files still work."));
+  }
+  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async () => {
