@@ -114,13 +114,95 @@ homeTokenInput.addEventListener("input", () => {
   localStorage.setItem("case_register_home_token", homeTokenInput.value.trim());
 });
 
-// ---------- Theme ----------
+// ---------- Theme & accent color ----------
 const themeOptionRadios = document.querySelectorAll('input[name="themeOption"]');
+
+const ACCENT_PRESETS = [
+  { id: "red", name: "Stamp Red",
+    light: { accent: "#B23A2F", accentDark: "#8C2C22", accentBg: "#FBF1EF" },
+    dark: { accent: "#E2685C", accentDark: "#B23A2F", accentBg: "rgba(226,104,92,.12)" } },
+  { id: "navy", name: "Navy Blue",
+    light: { accent: "#2A4E8C", accentDark: "#1E3A6B", accentBg: "#EAF0FA" },
+    dark: { accent: "#6E9EEB", accentDark: "#3B5FA3", accentBg: "rgba(110,158,235,.12)" } },
+  { id: "plum", name: "Plum",
+    light: { accent: "#7A3B6B", accentDark: "#5C2B50", accentBg: "#F6EDF3" },
+    dark: { accent: "#C97FB5", accentDark: "#8C4F79", accentBg: "rgba(201,127,181,.12)" } },
+  { id: "teal", name: "Teal",
+    light: { accent: "#1F7A72", accentDark: "#155A54", accentBg: "#E9F5F3" },
+    dark: { accent: "#5FC4B8", accentDark: "#2F8C82", accentBg: "rgba(95,196,184,.12)" } },
+  { id: "charcoal", name: "Charcoal",
+    light: { accent: "#3A4652", accentDark: "#252E38", accentBg: "#EEF0F2" },
+    dark: { accent: "#9FB0BD", accentDark: "#5C6B78", accentBg: "rgba(159,176,189,.12)" } },
+];
+
+const accentPickerBtn = el("accentPickerBtn");
+const accentMenu = el("accentMenu");
+const accentSwatchCurrent = el("accentSwatchCurrent");
+const accentNameCurrent = el("accentNameCurrent");
+let currentAccentId = localStorage.getItem("case_register_accent") || "red";
+
+function applyAccent(id) {
+  const preset = ACCENT_PRESETS.find(p => p.id === id) || ACCENT_PRESETS[0];
+  currentAccentId = preset.id;
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const vals = isDark ? preset.dark : preset.light;
+  document.documentElement.style.setProperty("--accent", vals.accent);
+  document.documentElement.style.setProperty("--accent-dark", vals.accentDark);
+  document.documentElement.style.setProperty("--accent-bg", vals.accentBg);
+  localStorage.setItem("case_register_accent", preset.id);
+  renderAccentPicker();
+}
+
+function renderAccentPicker() {
+  const preset = ACCENT_PRESETS.find(p => p.id === currentAccentId) || ACCENT_PRESETS[0];
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  accentSwatchCurrent.style.setProperty("--swatch-color", (isDark ? preset.dark : preset.light).accent);
+  accentNameCurrent.textContent = preset.name;
+
+  accentMenu.innerHTML = "";
+  ACCENT_PRESETS.forEach(p => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "accent-option" + (p.id === currentAccentId ? " active" : "");
+    btn.setAttribute("role", "menuitem");
+    const dot = document.createElement("span");
+    dot.className = "swatch";
+    dot.style.setProperty("--swatch-color", (isDark ? p.dark : p.light).accent);
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(" " + p.name));
+    btn.addEventListener("click", () => {
+      applyAccent(p.id);
+      accentMenu.setAttribute("hidden", "");
+      accentPickerBtn.setAttribute("aria-expanded", "false");
+    });
+    accentMenu.appendChild(btn);
+  });
+}
+
+accentPickerBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const willOpen = accentMenu.hasAttribute("hidden");
+  if (willOpen) accentMenu.removeAttribute("hidden"); else accentMenu.setAttribute("hidden", "");
+  accentPickerBtn.setAttribute("aria-expanded", String(willOpen));
+});
+document.addEventListener("click", (e) => {
+  if (!accentMenu.hasAttribute("hidden") && !accentMenu.contains(e.target) && !accentPickerBtn.contains(e.target)) {
+    accentMenu.setAttribute("hidden", "");
+    accentPickerBtn.setAttribute("aria-expanded", "false");
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !accentMenu.hasAttribute("hidden")) {
+    accentMenu.setAttribute("hidden", "");
+    accentPickerBtn.setAttribute("aria-expanded", "false");
+  }
+});
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("case_register_theme", theme);
   themeOptionRadios.forEach(r => { r.checked = r.value === theme; });
+  applyAccent(currentAccentId);
 }
 
 el("themeToggle").addEventListener("click", () => {

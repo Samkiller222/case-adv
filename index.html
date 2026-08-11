@@ -28,6 +28,9 @@
     --stamp:#B23A2F;
     --stamp-dark:#8C2C22;
     --stamp-bg:#FBF1EF;
+    --accent:#B23A2F;
+    --accent-dark:#8C2C22;
+    --accent-bg:#FBF1EF;
     --brass:#A98A4B;
     --brass-bg:#FBF6EA;
     --ok:#3A6B52;
@@ -55,6 +58,9 @@
     --stamp:#E2685C;
     --stamp-dark:#B23A2F;
     --stamp-bg:rgba(226,104,92,.12);
+    --accent:#E2685C;
+    --accent-dark:#B23A2F;
+    --accent-bg:rgba(226,104,92,.12);
     --brass:#D3B476;
     --brass-bg:rgba(211,180,118,.12);
     --ok:#63B98D;
@@ -70,7 +76,7 @@
     min-height:100vh;
     transition:background-color .2s ease, color .2s ease;
   }
-  :focus-visible{ outline:2px solid var(--stamp); outline-offset:2px; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
   header{
     background:var(--header-bg); color:var(--header-text);
@@ -117,7 +123,7 @@
     font-family:var(--font-body); font-size:13.5px; font-weight:600;
   }
   .app-menu button:hover{ background:var(--surface-alt); }
-  .app-menu button.active{ background:var(--stamp-bg); color:var(--stamp); }
+  .app-menu button.active{ background:var(--accent-bg); color:var(--accent); }
   .app-menu button span{
     font-weight:400; font-size:11.5px; color:var(--muted); font-family:var(--font-body);
   }
@@ -174,7 +180,7 @@
     transition:border-color .15s ease, background-color .15s ease;
   }
   .drop:hover{ border-color:var(--brass); background:var(--surface-alt); }
-  .drop.drag{ border-color:var(--stamp); background:var(--stamp-bg); }
+  .drop.drag{ border-color:var(--accent); background:var(--accent-bg); }
   .drop strong{ color:var(--text); }
   .drop input{ display:none; }
 
@@ -197,15 +203,43 @@
     transition:border-color .15s ease, box-shadow .15s ease;
   }
   .keyrow input:focus, .keyrow select:focus{
-    outline:none; border-color:var(--stamp); box-shadow:0 0 0 3px var(--stamp-bg);
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg);
   }
   .keyrow small{ display:block; margin-top:5px; color:var(--muted); font-size:11px; line-height:1.5; }
 
   .link-btn{
     display:inline-block; margin-top:12px; background:none; border:none; padding:0;
-    color:var(--stamp); cursor:pointer; font-family:var(--font-data); font-size:11.5px;
+    color:var(--accent); cursor:pointer; font-family:var(--font-data); font-size:11.5px;
   }
   .link-btn:hover{ text-decoration:underline; }
+
+  .accent-picker{ position:relative; }
+  .accent-picker-btn{
+    display:flex; align-items:center; gap:9px; width:100%;
+    padding:9px 10px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface-alt); color:var(--text); cursor:pointer;
+    font-family:var(--font-body); font-size:13px;
+    transition:border-color .15s ease;
+  }
+  .accent-picker-btn:hover{ border-color:var(--accent); }
+  .accent-picker-btn .chev{ width:14px; height:14px; margin-left:auto; color:var(--muted); flex:none; }
+  .swatch{
+    width:14px; height:14px; border-radius:999px; flex:none;
+    border:1px solid rgba(0,0,0,.18); background:var(--swatch-color, currentColor);
+  }
+  .accent-menu{
+    position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:20;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+    box-shadow:var(--shadow); padding:6px;
+  }
+  .accent-menu[hidden]{ display:none; }
+  .accent-option{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    padding:8px 10px; border-radius:var(--radius-sm); border:none; background:none;
+    color:var(--text); cursor:pointer; font-family:var(--font-body); font-size:13px;
+  }
+  .accent-option:hover{ background:var(--surface-alt); }
+  .accent-option.active{ background:var(--accent-bg); color:var(--accent); font-weight:600; }
 
   .btn{
     font-family:var(--font-body); font-weight:600; font-size:13.5px;
@@ -217,7 +251,7 @@
   .btn:active:not(:disabled){ transform:translateY(0); }
   .btn:disabled{ opacity:.4; cursor:not-allowed; }
   .btn.secondary{ background:transparent; color:var(--text); border-color:var(--border); }
-  .btn.stamp{ background:var(--stamp); border-color:var(--stamp-dark); color:#fff; }
+  .btn.stamp{ background:var(--accent); border-color:var(--accent-dark); color:#fff; }
   .btn.ok-flash{ background:var(--ok); border-color:var(--ok); color:#fff; }
 
   .actions{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
@@ -238,7 +272,7 @@
     transition:border-color .15s ease, box-shadow .15s ease;
   }
   .field input:focus, .field select:focus, .field textarea:focus{
-    outline:none; border-color:var(--stamp); box-shadow:0 0 0 3px var(--stamp-bg);
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg);
   }
   .field textarea{ min-height:56px; resize:vertical; }
   .fields-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
@@ -251,7 +285,7 @@
   }
   .radio-group{ display:flex; gap:16px; margin-bottom:16px; }
   .radio-option{ display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:500; color:var(--text); cursor:pointer; }
-  .radio-option input{ accent-color:var(--stamp); width:15px; height:15px; cursor:pointer; }
+  .radio-option input{ accent-color:var(--accent); width:15px; height:15px; cursor:pointer; }
   .bullets-title{ margin-bottom:8px; }
   .bullet-row{ display:flex; gap:6px; margin-bottom:8px; align-items:flex-start; }
   .bullet-row textarea{
@@ -259,7 +293,7 @@
     font-family:var(--font-body); font-size:13px; background:var(--surface-alt); color:var(--text);
     resize:none; overflow:hidden; min-height:38px; line-height:1.4;
   }
-  .bullet-row textarea:focus{ outline:none; border-color:var(--stamp); box-shadow:0 0 0 3px var(--stamp-bg); }
+  .bullet-row textarea:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
   .icon-btn{
     flex:none; width:34px; height:38px; border:1px solid var(--border); border-radius:var(--radius-sm);
     background:none; color:var(--muted); cursor:pointer; font-size:15px;
@@ -269,7 +303,7 @@
   .icon-btn:hover{ background:var(--stamp-bg); color:var(--stamp); }
   .add-finding-btn{
     width:100%; padding:9px; border:1px dashed var(--border); border-radius:var(--radius-sm);
-    background:none; color:var(--stamp); cursor:pointer; font-family:var(--font-body);
+    background:none; color:var(--accent); cursor:pointer; font-family:var(--font-body);
     font-size:13px; font-weight:600;
   }
   .add-finding-btn:hover{ background:var(--surface-alt); }
@@ -282,7 +316,7 @@
     font-size:13.5px; line-height:1.6; font-family:var(--font-body); resize:vertical;
     color:var(--text); background:var(--surface-alt);
   }
-  #emailOutput:focus{ outline:none; border-color:var(--stamp); box-shadow:0 0 0 3px var(--stamp-bg); }
+  #emailOutput:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
 
   .empty-state{ color:var(--muted); font-size:13px; padding:30px 6px; text-align:center; }
   .empty-state .mark{ font-family:var(--font-display); font-size:34px; color:var(--border); display:block; margin-bottom:8px; }
@@ -543,6 +577,21 @@
             <label class="radio-option"><input type="radio" name="themeOption" value="dark"> Dark</label>
           </div>
           <small>Also togglable anytime from the icon in the header.</small>
+        </div>
+
+        <div class="keyrow">
+          <label>Accent color</label>
+          <div class="accent-picker">
+            <button type="button" class="accent-picker-btn" id="accentPickerBtn" aria-haspopup="true" aria-expanded="false">
+              <span class="swatch" id="accentSwatchCurrent"></span>
+              <span id="accentNameCurrent">Stamp Red</span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="accent-menu" id="accentMenu" hidden role="menu"></div>
+          </div>
+          <small>Colors the primary buttons, links, and focus rings — error/compliance colors in the checklist stay fixed either way.</small>
         </div>
       </div>
     </section>

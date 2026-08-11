@@ -46,9 +46,20 @@ right now:
   standalone (no case loaded, no AI call) if you just want to type an email
   from scratch. Application type (Sport / Student / Employment) picks which
   Central Visa Unit checklist link goes in the email body.
-- **Options** — theme (also togglable from the header icon anytime) and the
-  extraction engine / API key settings described below, moved out of the
-  main intake panel to keep it focused on the current case.
+- **Options** — theme (also togglable from the header icon anytime), an
+  accent-color picker, and the extraction engine / API key settings
+  described below, moved out of the main intake panel to keep it focused
+  on the current case.
+
+## Accent color
+
+Options → Appearance has an accent-color dropdown (5 presets, each with a
+light/dark variant and a small swatch preview) that recolors primary
+buttons, links, focus rings, and the active menu item. It's decoupled from
+the checklist's semantic colors — Non-compliant/Missing badges and error
+text always stay red, Compliant always stays green, regardless of which
+accent you pick, so problem states remain visually unambiguous. Your
+choice persists in `localStorage` alongside the light/dark theme setting.
 
 ## Extraction engine: home server vs. Gemini
 
