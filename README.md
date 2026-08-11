@@ -37,30 +37,47 @@ right now:
   "Load from current case" (or opening the tab for the first time after an
   extraction) pulls the applicant's name, passport number, and a salutation
   guessed from gender straight from the current draft, and turns every
-  Non-compliant/Missing checklist item into a findings bullet automatically.
-  Findings are editable free text either way, and the tool works standalone
-  (no case loaded, no AI call) if you just want to type an email from
-  scratch. Application type (Sport / Student / Employment) picks which
+  Non-compliant/Missing checklist item into a findings bullet using a fixed
+  template — instant, free, works offline. A second button, **"Generate
+  findings with AI"**, is opt-in: it sends the same checklist issues to
+  whichever extraction engine is currently selected (see below) and asks it
+  to rewrite them as natural, professional prose, replacing the templated
+  bullets. Findings are editable free text either way, and the tool works
+  standalone (no case loaded, no AI call) if you just want to type an email
+  from scratch. Application type (Sport / Student / Employment) picks which
   Central Visa Unit checklist link goes in the email body.
+- **Options** — theme (also togglable from the header icon anytime) and the
+  extraction engine / API key settings described below, moved out of the
+  main intake panel to keep it focused on the current case.
 
 ## Extraction engine: home server vs. Gemini
 
-The "Extraction engine" dropdown on the page switches between two ways of
-processing documents — nothing else about the page changes:
+The "Extraction engine" dropdown in **Options** switches between two ways of
+processing documents and generating email findings — nothing else about the
+page changes:
 
 - **Home server (local model)** — your own server, reachable at a URL you
-  provide. The page `POST`s the files as `multipart/form-data` to
-  `<your-url>/extract` with `Authorization: Bearer <your-token>`, and
+  provide. For extraction, the page `POST`s files as `multipart/form-data`
+  to `<your-url>/extract` with `Authorization: Bearer <your-token>`, and
   expects back a JSON body shaped like the extracted record (the same keys
   as the Gemini path, plus an optional `checklist` array — see
-  `app.js`/`normalizeChecklist` for the exact shape). Nothing reaches a
-  third-party AI provider; documents go straight from your browser to your
-  server over HTTPS. This mode is selected by default.
-- **Gemini (cloud fallback)** — sends documents directly to Google's
-  `generativelanguage.googleapis.com` using a Gemini API key you supply
-  (free, no credit card — go to **aistudio.google.com**, **Get API key →
-  Create API key**, and paste the key, which starts with `AIza...`, into
-  the page).
+  `app.js`/`normalizeChecklist` for the exact shape). For the Email Writer's
+  "Generate findings with AI", it `POST`s JSON to `<your-url>/findings`
+  (same bearer-token auth) with body
+  `{ "applicant": { "name", "passport_number" }, "issues": [{ "id", "label", "status", "note" }, ...] }`
+  and expects back `{ "findings": ["...", ...] }` — one rewritten sentence
+  per issue, same order. Doc-verify's reference home server only implements
+  `/extract`; `/findings` is a new, optional contract — if your server
+  doesn't have that route yet, the button just shows a clear error, nothing
+  else breaks. Nothing reaches a third-party AI provider; documents go
+  straight from your browser to your server over HTTPS. This mode is
+  selected by default.
+- **Gemini (cloud fallback)** — sends documents (and, for findings
+  generation, just the checklist issue text — no documents) directly to
+  Google's `generativelanguage.googleapis.com` using a Gemini API key you
+  supply (free, no credit card — go to **aistudio.google.com**, **Get API
+  key → Create API key**, and paste the key, which starts with `AIza...`,
+  into the page).
 
 Both the URL/token and the API key are kept only in your browser's
 `localStorage` — **never** written to this repo or sent anywhere except

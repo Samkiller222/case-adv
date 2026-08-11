@@ -56,6 +56,8 @@ const CHECKLIST_ITEMS = [
     criteria: "€150 standard / €250 extended. This is a payment made by credit/visa card, not a document — always mark this item \"Not applicable\" since it cannot be verified from uploaded documents." },
 ];
 
+const GEMINI_MODEL = "gemini-3.6-flash";
+
 const state = {
   files: [],       // {id, file}
   record: null,    // last extracted record (object keyed by FIELDS[].key), plus .checklist
@@ -84,6 +86,7 @@ const homeUrlInput = el("homeUrl");
 const homeTokenInput = el("homeToken");
 const homeServerRow = el("homeServerRow");
 const geminiRow = el("geminiRow");
+const engineTagEl = el("engineTag");
 
 engineModeEl.value = localStorage.getItem("case_register_engine") || "home";
 homeUrlInput.value = localStorage.getItem("case_register_home_url") || "";
@@ -93,6 +96,7 @@ function syncEngineRows() {
   const isHome = engineModeEl.value === "home";
   homeServerRow.style.display = isHome ? "" : "none";
   geminiRow.style.display = isHome ? "none" : "";
+  engineTagEl.textContent = isHome ? "Home server" : "Gemini";
 }
 syncEngineRows();
 
@@ -108,12 +112,24 @@ homeTokenInput.addEventListener("input", () => {
 });
 
 // ---------- Theme ----------
+const themeOptionRadios = document.querySelectorAll('input[name="themeOption"]');
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("case_register_theme", theme);
+  themeOptionRadios.forEach(r => { r.checked = r.value === theme; });
+}
+
 el("themeToggle").addEventListener("click", () => {
   const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
-  const next = current === "dark" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("case_register_theme", next);
+  applyTheme(current === "dark" ? "light" : "dark");
 });
+
+themeOptionRadios.forEach(r => {
+  r.addEventListener("change", () => { if (r.checked) applyTheme(r.value); });
+});
+
+applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
 
 // ---------- Apps menu / view switching ----------
 const VIEW_META = {
@@ -127,10 +143,16 @@ const VIEW_META = {
     title: "Email writer",
     subtitle: "Draft a document-revision request from the current case's findings, or write one from scratch.",
   },
+  options: {
+    eyebrow: "Case Register · Settings",
+    title: "Options",
+    subtitle: "Theme, extraction engine, and API key — everything the other views need to run.",
+  },
 };
 
 const viewIntakeEl = el("view-intake");
 const viewEmailEl = el("view-email");
+const viewOptionsEl = el("view-options");
 const menuToggle = el("menuToggle");
 const appMenu = el("appMenu");
 let currentView = "intake";
@@ -140,6 +162,7 @@ function switchView(name) {
   currentView = name;
   viewIntakeEl.hidden = name !== "intake";
   viewEmailEl.hidden = name !== "email";
+  viewOptionsEl.hidden = name !== "options";
 
   const meta = VIEW_META[name];
   el("viewEyebrow").textContent = meta.eyebrow;
@@ -183,6 +206,8 @@ document.addEventListener("keydown", (e) => {
     menuToggle.setAttribute("aria-expanded", "false");
   }
 });
+
+el("openOptionsBtn").addEventListener("click", () => switchView("options"));
 
 // ---------- File intake ----------
 const drop = el("drop");
@@ -342,9 +367,8 @@ For each item, set "status" to exactly one of:
       generationConfig: { responseMimeType: "application/json" },
     };
 
-    const model = "gemini-3.6-flash";
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -643,6 +667,13 @@ const emailCopySubjectBtn = el("emailCopySubjectBtn");
 const emailCopyBodyBtn = el("emailCopyBodyBtn");
 const emailCaseTag = el("emailCaseTag");
 const emailLoadCaseBtn = el("emailLoadCaseBtn");
+const emailGenerateFindingsBtn = el("emailGenerateFindingsBtn");
+const emailStatusEl = el("emailStatus");
+
+function setEmailStatus(msg, isErr) {
+  emailStatusEl.textContent = msg;
+  emailStatusEl.className = "status" + (isErr ? " err" : "");
+}
 
 function getEmailAppType() {
   return document.querySelector('input[name="emailAppType"]:checked').value;
@@ -796,6 +827,114 @@ function loadCaseIntoEmail() {
 }
 
 emailLoadCaseBtn.addEventListener("click", loadCaseIntoEmail);
+
+function getCurrentChecklistIssues() {
+  const rec = state.record;
+  return rec ? (rec.checklist || []).filter(c => c.status === "Non-compliant" || c.status === "Missing") : [];
+}
+
+function issuesForPrompt(issues) {
+  return issues.map(entry => {
+    const item = CHECKLIST_ITEMS.find(i => i.id === entry.id);
+    return { id: entry.id, label: item ? item.label : entry.id, status: entry.status, note: entry.note || "" };
+  });
+}
+
+async function generateFindingsWithAI() {
+  const issues = getCurrentChecklistIssues();
+  if (!state.record) {
+    setEmailStatus("Load a case first (or add findings manually).", true);
+    return;
+  }
+  if (!issues.length) {
+    setEmailStatus("No compliance issues on the current case — nothing to generate wording for.", true);
+    return;
+  }
+
+  emailGenerateFindingsBtn.disabled = true;
+  setEmailStatus("Generating findings…");
+
+  try {
+    const applicant = {
+      name: emailApplicantName.value.trim(),
+      passport_number: emailPassportNumber.value.trim(),
+    };
+    const promptIssues = issuesForPrompt(issues);
+    let findings;
+
+    if (engineModeEl.value === "home") {
+      const url = homeUrlInput.value.trim();
+      const token = homeTokenInput.value.trim();
+      if (!url) throw new Error("Enter your home server URL in Options first.");
+      if (!token) throw new Error("Enter your home server token in Options first.");
+
+      const resp = await fetch(`${url.replace(/\/$/, "")}/findings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ applicant, issues: promptIssues }),
+      });
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(errBody.error || `Home server error ${resp.status} (does it implement /findings?)`);
+      }
+      const data = await resp.json();
+      findings = Array.isArray(data.findings) ? data.findings : [];
+    } else {
+      const key = apiKeyInput.value.trim();
+      if (!key) throw new Error("Enter your Gemini API key in Options first.");
+
+      const issuesText = promptIssues
+        .map((e, i) => `${i + 1}. ${e.label} — status: ${e.status}${e.note ? `; note: ${e.note}` : ""}`)
+        .join("\n");
+      const prompt = `You are drafting findings bullet points for a visa application revision-request email to the applicant${applicant.name ? ` (${applicant.name})` : ""}.
+Below are compliance issues found against Malta's Central Visa Unit Employment Visa checklist. Rewrite each one as a single clear, polite, professional sentence telling the applicant what's wrong and, where the note gives specifics, what's needed to fix it. Do not invent details beyond what's given — no fabricated dates, amounts, or documents. Keep each bullet self-contained and concise (one sentence).
+
+Issues:
+${issuesText}
+
+Return ONLY a JSON array of strings, no markdown fences, no commentary, with exactly ${promptIssues.length} entries in the same order as the issues above.`;
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+        }
+      );
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`API error ${resp.status}: ${errText.slice(0, 300)}`);
+      }
+      const data = await resp.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join("") || "";
+      if (!rawText) throw new Error("No text in response — the model may have blocked the content or returned nothing.");
+      findings = JSON.parse(rawText.replace(/```json|```/g, "").trim());
+    }
+
+    if (!Array.isArray(findings) || !findings.length) {
+      throw new Error("The engine didn't return any findings text.");
+    }
+
+    emailBulletsContainer.innerHTML = "";
+    findings.forEach(text => addEmailBullet(String(text)));
+    renderEmail();
+    setEmailStatus(`Generated ${findings.length} finding${findings.length === 1 ? "" : "s"} with AI. Review before sending.`);
+  } catch (err) {
+    console.error(err);
+    const msg = /Failed to fetch|NetworkError/i.test(err.message || "")
+      ? "Can't reach the engine — check it's reachable, or switch engine in Options."
+      : (err.message || "Couldn't generate findings.");
+    setEmailStatus(msg, true);
+  } finally {
+    emailGenerateFindingsBtn.disabled = false;
+  }
+}
+
+emailGenerateFindingsBtn.addEventListener("click", generateFindingsWithAI);
 
 // initial render
 renderFileList();
