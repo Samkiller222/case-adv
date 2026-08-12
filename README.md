@@ -19,7 +19,11 @@ No backend required. It's a static page (`index.html` + `app.js`) that:
   form, passport validity, photo, AIP timing, VFS appointment, flight
   itinerary, insurance thresholds, accommodation proof, Skills Pass,
   fees) and shows each item as Compliant / Non-compliant / Missing / Not
-  applicable, with a one-line reason,
+  applicable, with a one-line reason — click any item to expand it and
+  **override the status and reason yourself**; the AI's verdict is a
+  starting point, not the final word, and your edit flows through to the
+  case log, CSV/JSON export, and the Email Writer's findings the same way
+  an AI-determined one would,
 - shows you the draft so you can correct anything before it's saved,
 - keeps a running case log in the browser (`localStorage`) with CSV export
   (including a `checklist_issues` column summarizing any flagged items) and
