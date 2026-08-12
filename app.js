@@ -666,60 +666,60 @@ function renderChecklist(checklist) {
     const row = document.createElement("div");
     row.className = "checklist-item expandable";
 
-    // Status is a real <select> right in the row — tap it and pick a status
-    // immediately, no need to expand the row first. It stops propagation so
-    // opening/using it doesn't also toggle the row's expand state below.
-    const statusSelect = document.createElement("select");
-    statusSelect.className = `checklist-status-select ${checklistBadgeClass(c.status)}`;
-    statusSelect.setAttribute("aria-label", `Status for ${item ? item.label : c.id}`);
-    CHECKLIST_STATUSES.forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s; opt.textContent = s;
-      if (c.status === s) opt.selected = true;
-      statusSelect.appendChild(opt);
-    });
-    statusSelect.addEventListener("click", (e) => e.stopPropagation());
-    statusSelect.addEventListener("change", () => {
-      c.status = statusSelect.value;
-      statusSelect.className = `checklist-status-select ${checklistBadgeClass(c.status)}`;
-      updateChecklistTag();
-    });
+    const badge = document.createElement("span");
+    badge.className = `badge ${checklistBadgeClass(c.status)}`;
+    badge.textContent = c.status;
 
-    const head = document.createElement("div");
+    const head = document.createElement("button");
+    head.type = "button";
     head.className = "checklist-item-head";
-    head.setAttribute("role", "button");
-    head.setAttribute("tabindex", "0");
     head.setAttribute("aria-expanded", "false");
     const label = document.createElement("span");
     label.className = "checklist-label";
     label.textContent = item ? item.label : c.id;
     const right = document.createElement("span");
     right.className = "checklist-item-right";
-    right.appendChild(statusSelect);
+    right.appendChild(badge);
     right.insertAdjacentHTML("beforeend", `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`);
     head.appendChild(label);
     head.appendChild(right);
-    function toggleExpand() {
+    head.addEventListener("click", () => {
       const expanded = row.classList.toggle("expanded");
       head.setAttribute("aria-expanded", String(expanded));
-    }
-    head.addEventListener("click", toggleExpand);
-    head.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpand(); }
     });
     row.appendChild(head);
 
     const edit = document.createElement("div");
     edit.className = "checklist-edit";
 
+    const statusLabel = document.createElement("label");
+    statusLabel.className = "field-label";
+    statusLabel.textContent = "Status — you can override this";
+    const statusSelect = document.createElement("select");
+    CHECKLIST_STATUSES.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s; opt.textContent = s;
+      if (c.status === s) opt.selected = true;
+      statusSelect.appendChild(opt);
+    });
+    statusSelect.addEventListener("change", () => {
+      c.status = statusSelect.value;
+      badge.className = `badge ${checklistBadgeClass(c.status)}`;
+      badge.textContent = c.status;
+      updateChecklistTag();
+    });
+
     const noteLabel = document.createElement("label");
     noteLabel.className = "field-label";
+    noteLabel.style.marginTop = "10px";
     noteLabel.textContent = "Reason";
     const noteInput = document.createElement("textarea");
     noteInput.placeholder = "Why? (e.g. what's missing or doesn't meet the requirement)";
     noteInput.value = c.note || "";
     noteInput.addEventListener("input", () => { c.note = noteInput.value; });
 
+    edit.appendChild(statusLabel);
+    edit.appendChild(statusSelect);
     edit.appendChild(noteLabel);
     edit.appendChild(noteInput);
     row.appendChild(edit);
