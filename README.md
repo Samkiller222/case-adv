@@ -9,6 +9,10 @@ Flight Date, Accommodation, Insurance, Insurance Expiry, Skills pass, Job title,
 Employer, result, Comments.
 
 No backend required. It's a static page (`index.html` + `app.js`) that:
+- keeps whatever documents you've attached (`IndexedDB`, not
+  `localStorage` — file contents are too big for that) so an accidental
+  refresh before you hit "Extract" doesn't lose them; removing a file,
+  clearing files, or saving the case cleans up its copy too,
 - reads text directly out of text-based PDFs (`pdf.js`, loaded from a CDN),
 - sends images, and scanned PDFs with no text layer, to whichever
   **extraction engine** you pick — your own **home server**, or the
