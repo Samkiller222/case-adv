@@ -559,15 +559,36 @@ function renderChecklist(checklist) {
   list.className = "checklist-list";
   checklist.forEach(c => {
     const item = CHECKLIST_ITEMS.find(i => i.id === c.id);
+    const hasNote = !!(c.note && c.note.trim());
+
     const row = document.createElement("div");
-    row.className = "checklist-item";
-    row.innerHTML = `
-      <div class="checklist-item-head">
-        <span class="checklist-label">${escapeHtml(item ? item.label : c.id)}</span>
+    row.className = "checklist-item" + (hasNote ? " expandable" : "");
+
+    const head = document.createElement("button");
+    head.type = "button";
+    head.className = "checklist-item-head";
+    if (!hasNote) head.disabled = true;
+    head.innerHTML = `
+      <span class="checklist-label">${escapeHtml(item ? item.label : c.id)}</span>
+      <span class="checklist-item-right">
         <span class="badge ${checklistBadgeClass(c.status)}">${escapeHtml(c.status)}</span>
-      </div>
-      ${c.note ? `<div class="checklist-note">${escapeHtml(c.note)}</div>` : ""}
+        ${hasNote ? `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>` : ""}
+      </span>
     `;
+    row.appendChild(head);
+
+    if (hasNote) {
+      const note = document.createElement("div");
+      note.className = "checklist-note";
+      note.textContent = c.note;
+      row.appendChild(note);
+      head.setAttribute("aria-expanded", "false");
+      head.addEventListener("click", () => {
+        const expanded = row.classList.toggle("expanded");
+        head.setAttribute("aria-expanded", String(expanded));
+      });
+    }
+
     list.appendChild(row);
   });
   checklistBody.innerHTML = "";
