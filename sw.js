@@ -16,7 +16,7 @@
  * reach already-installed users promptly — it forces the old cache to be
  * dropped on activate.
  */
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const SHELL_CACHE = `case-register-shell-${CACHE_VERSION}`;
 const CDN_CACHE = `case-register-cdn-${CACHE_VERSION}`;
 
@@ -88,7 +88,12 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return; // leave any other cross-origin request alone
 
   event.respondWith(
-    fetch(req)
+    // no-store bypasses the browser's ordinary HTTP cache — otherwise a
+    // sub-resource fetched here can be served straight out of that cache
+    // (respecting its Cache-Control/max-age) without ever reaching the
+    // network, which quietly defeats "network-first" and is exactly how a
+    // deployed fix can still show stale behavior after a manual reload.
+    fetch(req, { cache: "no-store" })
       .then((resp) => {
         const copy = resp.clone();
         caches.open(SHELL_CACHE).then((cache) => cache.put(req, copy));

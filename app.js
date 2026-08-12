@@ -18,6 +18,16 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
+  // A new service worker taking control means a newer app.js/index.html
+  // just replaced what this tab is currently running on — reload once so
+  // the tab actually gets it, instead of the fix silently sitting in the
+  // cache until the user happens to close and reopen the page.
+  let reloadedForNewSW = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloadedForNewSW) return;
+    reloadedForNewSW = true;
+    window.location.reload();
+  });
 }
 
 const FIELDS = [
