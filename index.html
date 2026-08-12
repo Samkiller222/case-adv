@@ -192,14 +192,22 @@
   .checklist-item-right .chevron{ width:14px; height:14px; color:var(--muted); flex:none; transition:transform .2s ease; }
   .checklist-item.expanded .chevron{ transform:rotate(180deg); }
   .checklist-label{ font-size:13px; font-weight:600; }
-  .checklist-note{
-    max-height:0; opacity:0; overflow:hidden; padding:0 12px;
-    font-size:12px; color:var(--muted); line-height:1.5;
-    transition:max-height .2s ease, opacity .15s ease, padding-bottom .2s ease;
+  .checklist-edit{ display:none; flex-direction:column; padding:0 12px 12px; }
+  .checklist-item.expanded .checklist-edit{ display:flex; }
+  .checklist-edit .field-label{
+    display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--muted); margin-bottom:5px; font-family:var(--font-data);
   }
-  .checklist-item.expanded .checklist-note{ max-height:220px; opacity:1; padding:0 12px 10px; }
+  .checklist-edit select, .checklist-edit textarea{
+    width:100%; padding:8px 9px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font-family:var(--font-body); font-size:13px; background:var(--surface-alt); color:var(--text);
+  }
+  .checklist-edit textarea{ min-height:56px; resize:vertical; }
+  .checklist-edit select:focus, .checklist-edit textarea:focus{
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg);
+  }
   @media (prefers-reduced-motion: reduce){
-    .checklist-note, .checklist-item-right .chevron{ transition:none; }
+    .checklist-item-right .chevron{ transition:none; }
   }
   .panel-body{ padding:18px; }
 

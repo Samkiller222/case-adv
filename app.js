@@ -560,43 +560,78 @@ function renderChecklist(checklist) {
     return;
   }
 
-  const flagged = checklist.filter(c => c.status === "Non-compliant" || c.status === "Missing").length;
-  checklistTag.textContent = flagged === 0 ? "All clear" : `${flagged} issue${flagged === 1 ? "" : "s"}`;
-  checklistTag.className = "tag " + (flagged === 0 ? "ok" : "err");
+  function updateChecklistTag() {
+    const flagged = checklist.filter(c => c.status === "Non-compliant" || c.status === "Missing").length;
+    checklistTag.textContent = flagged === 0 ? "All clear" : `${flagged} issue${flagged === 1 ? "" : "s"}`;
+    checklistTag.className = "tag " + (flagged === 0 ? "ok" : "err");
+  }
+  updateChecklistTag();
 
   const list = document.createElement("div");
   list.className = "checklist-list";
   checklist.forEach(c => {
     const item = CHECKLIST_ITEMS.find(i => i.id === c.id);
-    const hasNote = !!(c.note && c.note.trim());
 
     const row = document.createElement("div");
-    row.className = "checklist-item" + (hasNote ? " expandable" : "");
+    row.className = "checklist-item expandable";
+
+    const badge = document.createElement("span");
+    badge.className = `badge ${checklistBadgeClass(c.status)}`;
+    badge.textContent = c.status;
 
     const head = document.createElement("button");
     head.type = "button";
     head.className = "checklist-item-head";
-    if (!hasNote) head.disabled = true;
-    head.innerHTML = `
-      <span class="checklist-label">${escapeHtml(item ? item.label : c.id)}</span>
-      <span class="checklist-item-right">
-        <span class="badge ${checklistBadgeClass(c.status)}">${escapeHtml(c.status)}</span>
-        ${hasNote ? `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>` : ""}
-      </span>
-    `;
+    head.setAttribute("aria-expanded", "false");
+    const label = document.createElement("span");
+    label.className = "checklist-label";
+    label.textContent = item ? item.label : c.id;
+    const right = document.createElement("span");
+    right.className = "checklist-item-right";
+    right.appendChild(badge);
+    right.insertAdjacentHTML("beforeend", `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`);
+    head.appendChild(label);
+    head.appendChild(right);
+    head.addEventListener("click", () => {
+      const expanded = row.classList.toggle("expanded");
+      head.setAttribute("aria-expanded", String(expanded));
+    });
     row.appendChild(head);
 
-    if (hasNote) {
-      const note = document.createElement("div");
-      note.className = "checklist-note";
-      note.textContent = c.note;
-      row.appendChild(note);
-      head.setAttribute("aria-expanded", "false");
-      head.addEventListener("click", () => {
-        const expanded = row.classList.toggle("expanded");
-        head.setAttribute("aria-expanded", String(expanded));
-      });
-    }
+    const edit = document.createElement("div");
+    edit.className = "checklist-edit";
+
+    const statusLabel = document.createElement("label");
+    statusLabel.className = "field-label";
+    statusLabel.textContent = "Status — you can override this";
+    const statusSelect = document.createElement("select");
+    CHECKLIST_STATUSES.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s; opt.textContent = s;
+      if (c.status === s) opt.selected = true;
+      statusSelect.appendChild(opt);
+    });
+    statusSelect.addEventListener("change", () => {
+      c.status = statusSelect.value;
+      badge.className = `badge ${checklistBadgeClass(c.status)}`;
+      badge.textContent = c.status;
+      updateChecklistTag();
+    });
+
+    const noteLabel = document.createElement("label");
+    noteLabel.className = "field-label";
+    noteLabel.style.marginTop = "10px";
+    noteLabel.textContent = "Reason";
+    const noteInput = document.createElement("textarea");
+    noteInput.placeholder = "Why? (e.g. what's missing or doesn't meet the requirement)";
+    noteInput.value = c.note || "";
+    noteInput.addEventListener("input", () => { c.note = noteInput.value; });
+
+    edit.appendChild(statusLabel);
+    edit.appendChild(statusSelect);
+    edit.appendChild(noteLabel);
+    edit.appendChild(noteInput);
+    row.appendChild(edit);
 
     list.appendChild(row);
   });
